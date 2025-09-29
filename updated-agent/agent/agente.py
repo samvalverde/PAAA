@@ -22,7 +22,8 @@ local_llm = "llama3"
 # RESPONSE
 
 def agente(enunciado, resultados, poblacion):
-    OPENAI_API_KEY = "sk-proj-Hgo2u6JsGuYYTUTC5KjyT3BlbkFJu9USOSpXBx08axD58CkA"
+    #Acá tomariamos el key de un secret
+    OPENAI_API_KEY = "secretillo jj"
     print("python")
     print(enunciado)
     # if not isinstance(resultados, list):

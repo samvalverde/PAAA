@@ -22,7 +22,7 @@ local_llm = "llama3"
 def agente(enunciado, resultados, poblacion):
 
     #esto lo pongo en un secret
-    OPENAI_API_KEY = "sk-proj-Hgo2u6JsGuYYTUTC5KjyT3BlbkFJu9USOSpXBx08axD58CkA"
+    OPENAI_API_KEY = "casi jajaja"
     print("python")
     print(enunciado)
     # if not isinstance(resultados, list):
