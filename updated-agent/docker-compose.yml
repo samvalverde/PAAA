@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  agente:
+    build:
+      context: .
+      dockerfile: agent/Dockerfile
+    image: updated-agent:latest
+    secrets:
+      - openai_api_key
+    environment:
+      - MODEL=gpt-4o-mini
+    volumes:
+      - ./agent/datos:/app/agent/datos
+      - ./agent/docs:/app/agent/docs
+      - ./output:/app/output
+    command: python agent/estudiantes-ati.py
+
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: estudiantes_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+  
+
+volumes:
+  db_data:
+  
+
+
+secrets:
+  openai_api_key:
+    file: ./secrets/OPENAI_API_KEY
