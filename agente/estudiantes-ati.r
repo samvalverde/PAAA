@@ -267,8 +267,8 @@ process_population <- function(population) {
 }
 
 # Call the function with the desired population
-process_population("Estudiantes")
-# process_population("Administrativos")
+# process_population("Estudiantes")
+process_population("Administrativos")
 # process_population("Docentes")
 # process_population("Empleadores")
 # process_population("Graduados")

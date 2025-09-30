@@ -22,6 +22,9 @@ local_llm = "llama3"
 # RESPONSE
 
 def agente(enunciado, resultados, poblacion):
+    return (f"Acá iria el prompt {enunciado}, {resultados}, {poblacion}")
+    '''
+    
     #Acá tomariamos el key de un secret
     OPENAI_API_KEY = "secretillo jj"
     print("python")
@@ -56,3 +59,4 @@ def agente(enunciado, resultados, poblacion):
 
     generation = rag_chain.invoke({"question": enunciado, "resultados": resultados2})
     return generation
+'''
