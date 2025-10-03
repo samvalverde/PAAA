@@ -57,3 +57,19 @@ create table audit_log (
   constraint fk_audit__process foreign key (process_id) references processes(id) on delete restrict
 );
 
+-- Tabla de documentos versionados
+create table documents (
+  id bigint not null,
+  ver integer not null check (ver > 0),
+  user_id bigint not null,
+  process_id bigint not null,
+  title text not null,
+  storage_key text not null,
+  created_at timestamptz not null default now(),
+  constraint pk_documents primary key (id, ver)
+  constraint uq_documents__storage_key unique (storage_key),
+  constraint fk_documents__user foreign key (user_id) references users(id) on delete restrict,
+  constraint fk_documents__process foreign key (process_id) references processes(id) on delete restrict
+);
+
+
