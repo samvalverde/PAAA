@@ -1,28 +1,25 @@
+# agente/Dockerfile
 FROM python:3.12-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-  PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+  PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-# Instalar Poetry
+# (si usas poetry, instala; si no, puedes usar pip directamente con requirements)
+# Aquí asumimos poetry porque ya lo tenías
 RUN pip install --no-cache-dir poetry==1.8.3
-
-# Copiamos metadata
 COPY pyproject.toml poetry.lock ./
-
-# Instala solo deps "main" en el sistema del contenedor (sin venv)
 RUN poetry config virtualenvs.create false \
   && poetry install --no-interaction --no-ansi --only main
 
-# Copiamos el código de la carpeta agent
-COPY agent/ ./agent/
+# Copiar el código
+COPY . /app
 
-# (Opcional) fuentes para matplotlib
-# RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core \
-#     && rm -rf /var/lib/apt/lists/*
+# uploads
+RUN mkdir -p /app/uploads
 
-ENV MODEL=gpt-4o-mini
+EXPOSE 8000
 
-# Ejecuta tu entrypoint
-CMD ["python", "agent/estudiantes-ati.py"]
+# Entrypoint: API FastAPI
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

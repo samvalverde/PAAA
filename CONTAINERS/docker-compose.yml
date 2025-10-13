@@ -3,18 +3,20 @@ version: "3.8"
 services:
   agente:
     build:
-      context: .
-      dockerfile: agent/Dockerfile
-    image: updated-agent:latest
-    secrets:
-      - openai_api_key
+      context: ./agent
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
     environment:
-      - MODEL=gpt-4o-mini
-    volumes:
-      - ./agent/datos:/app/agent/datos
-      - ./agent/docs:/app/agent/docs
-      - ./output:/app/output
-    command: python agent/estudiantes-ati.py # Esto lo cambiamos en la siguiente iteración
+      PG_DSN: postgresql+psycopg2://etl_user:etl_pass@database_etl:5432/paaa_etl
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minio123
+      MINIO_BUCKET: paaa
+      MINIO_SECURE: "false"
+    depends_on:
+      database_etl:
+        condition: service_healthy
 
   database:
     image: postgres
@@ -42,7 +44,8 @@ services:
     ports:
       - 5050:80
     depends_on:
-      - db
+      - database
+
 
   minio:
     image: minio/minio
@@ -59,11 +62,31 @@ services:
     networks:
       - default
     depends_on:
-      - api
+      - agente
+  
+  database_etl:
+    image: postgres:16-alpine
+    container_name: database_etl
+    environment:
+      POSTGRES_USER: etl_user
+      POSTGRES_PASSWORD: etl_pass
+      POSTGRES_DB: paaa_etl
+    volumes:
+      - pgdata_etl:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U etl_user -d paaa_etl"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      default:
+        aliases: [dbetl]
   
 
 volumes:
-  db_data:
+  db-data:
+  minio-data:
+  pgdata_etl:
   
 
 
