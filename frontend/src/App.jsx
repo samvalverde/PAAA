@@ -1,33 +1,37 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { Button } from 'primereact/button';
+import { InputText } from 'primereact/inputtext';
+
+import 'primereact/resources/themes/lara-light-indigo/theme.css'; //theme
+import 'primereact/resources/primereact.min.css'; //core css
+import 'primeicons/primeicons.css';
+import { Card } from 'primereact/card';
+        
+        
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <Card title= "Login">
+        <div className='p-inputgroup flex-1'>
+          <span className='p-inputgroup-addon'>
+            <i className='pi pi-user'></i>
+          </span>
+          <InputText placeholder='Username' />
+        </div>
+
+        <div className='p-inputgroup space'>
+          <span className='p-inputgroup-addon'>
+            <i className='pi pi-check'></i>
+          </span>
+          <InputText placeholder='Password' type='password' />
+        </div>
+        <div className='card'>
+          <Button label='Login' icon='pi pi-check' color='blue'/>
+        </div>
+      </Card>
     </>
   )
 }
