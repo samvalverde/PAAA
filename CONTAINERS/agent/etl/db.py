@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 from hashlib import sha1
-from typing import Iterable, List
+from typing import Iterable
 
 import pandas as pd
 from sqlalchemy import create_engine, text
@@ -15,8 +15,8 @@ from sqlalchemy.engine import Engine, Connection
 # -------------------------------------------------------------------
 def make_engine(pg_dsn: str | None = None) -> Engine:
     """
-    Crea un engine de SQLAlchemy.
-    - Si pg_dsn es None, lo toma de PG_DSN o arma uno con PGHOST/PGPORT/...
+    Crea un Engine de SQLAlchemy 2.0.
+    - Si pg_dsn es None, lo toma de PG_DSN o compone uno con PGHOST/PGPORT/...
     """
     dsn = (
         pg_dsn
@@ -51,7 +51,7 @@ def _table_exists(conn: Connection, schema: str, table: str) -> bool:
 
 def _safe_index_name(schema: str, table: str, cols: list[str]) -> str:
     """
-    Genera un nombre de índice único y corto (<= 63 bytes en PG).
+    Genera un nombre de índice (<= 63 bytes en PG).
     """
     base = f'ux_{schema}_{table}_' + "_".join(cols)
     return base if len(base) <= 60 else f'ux_{schema}_{table}_{sha1(base.encode()).hexdigest()[:8]}'
@@ -59,12 +59,11 @@ def _safe_index_name(schema: str, table: str, cols: list[str]) -> str:
 
 def ensure_unique_index(conn: Connection, schema: str, table: str, key_columns: list[str]) -> None:
     """
-    Crea un índice UNIQUE sobre las columnas de la llave si no existe.
-    Es requisito para que ON CONFLICT(...) funcione.
+    Crea un índice UNIQUE en (key_columns) si no existe.
+    Requisito para que ON CONFLICT (...) funcione.
     """
     if not key_columns:
         raise ValueError("key_columns no puede ser vacío.")
-
     idx_name = _safe_index_name(schema, table, key_columns)
     cols_csv = ", ".join(f'"{c}"' for c in key_columns)
     sql = f'CREATE UNIQUE INDEX IF NOT EXISTS "{idx_name}" ON "{schema}"."{table}" ({cols_csv})'
@@ -74,7 +73,7 @@ def ensure_unique_index(conn: Connection, schema: str, table: str, key_columns: 
 def _create_table_from_dataframe(conn: Connection, df: pd.DataFrame, schema: str, table: str) -> None:
     """
     Crea la tabla destino con el layout del DataFrame (sin constraints).
-    Usa df.head(0) -> crea estructura sin insertar filas.
+    Usa df.head(0) para crear solo la estructura.
     """
     df.head(0).to_sql(name=table, con=conn, schema=schema, index=False, if_exists="fail", method=None)
 
@@ -93,33 +92,30 @@ def upsert_dataframe(
 ) -> None:
     """
     Inserta df en schema.table realizando UPSERT por key_columns.
-    - Si la tabla no existe y create_if_missing=True, la crea con el layout del DataFrame.
-    - Garantiza un índice UNIQUE sobre key_columns antes del ON CONFLICT.
 
     Estrategia:
-      1) (opcional) crear tabla si no existe
-      2) garantizar índice único sobre las llaves
-      3) volcar df a una tabla temporal persistente (_tmp_*)
-      4) INSERT ... SELECT ... ON CONFLICT (keys) DO UPDATE SET ...
+      1) crear tabla si no existe (opcional)
+      2) garantizar índice UNIQUE sobre las llaves
+      3) volcar df a tabla temporal persistente (_tmp_*)
+      4) INSERT ... SELECT ... ON CONFLICT (keys) DO UPDATE / DO NOTHING
       5) DROP TABLE temp
     """
+    from uuid import uuid4
+
     key_columns = list(key_columns)
     if not key_columns:
         raise ValueError("key_columns no puede ser vacío.")
 
     # 1) crear tabla si falta
-    exists = _table_exists(conn, schema, table)
-    if not exists:
+    if not _table_exists(conn, schema, table):
         if not create_if_missing:
             raise RuntimeError(f'La tabla "{schema}"."{table}" no existe y create_if_missing=False.')
         _create_table_from_dataframe(conn, df, schema, table)
 
-    # 2) garantizar índice UNIQUE para ON CONFLICT
+    # 2) índice UNIQUE para ON CONFLICT
     ensure_unique_index(conn, schema, table, key_columns)
 
-    # 3) escribir DataFrame a tabla temporal persistente
-    from uuid import uuid4
-
+    # 3) escribir DataFrame en temporal
     tmp = f"_tmp_{table}_{uuid4().hex[:8]}"
     df.to_sql(
         name=tmp,
@@ -131,37 +127,37 @@ def upsert_dataframe(
         chunksize=chunksize,
     )
 
-    # 4) construir UPSERT SQL
+    # 4) construir UPSERT
     cols = list(df.columns)
     cols_csv = ", ".join(f'"{c}"' for c in cols)
     keys_csv = ", ".join(f'"{k}"' for k in key_columns)
 
-    # columnas a actualizar = todas menos las llaves
+    # actualizar todas las columnas excepto las llaves
     update_cols = [c for c in cols if c not in key_columns]
-    set_clause = ", ".join(f'"{c}" = EXCLUDED."{c}"' for c in update_cols) or ""
-    if not set_clause:
-        # si solo vienen llaves y no hay nada que actualizar, hacemos DO NOTHING
-        upsert_sql = f'''
-            INSERT INTO "{schema}"."{table}" ({cols_csv})
-            SELECT {cols_csv} FROM "{schema}"."{tmp}"
-            ON CONFLICT ({keys_csv}) DO NOTHING
-        '''
-    else:
+    if update_cols:
+        set_clause = ", ".join(f'"{c}" = EXCLUDED."{c}"' for c in update_cols)
         upsert_sql = f'''
             INSERT INTO "{schema}"."{table}" ({cols_csv})
             SELECT {cols_csv} FROM "{schema}"."{tmp}"
             ON CONFLICT ({keys_csv})
             DO UPDATE SET {set_clause}
         '''
+    else:
+        # si solo hay llaves, no hay nada que actualizar
+        upsert_sql = f'''
+            INSERT INTO "{schema}"."{table}" ({cols_csv})
+            SELECT {cols_csv} FROM "{schema}"."{tmp}"
+            ON CONFLICT ({keys_csv}) DO NOTHING
+        '''
 
     conn.execute(text(upsert_sql))
 
-    # 5) limpiar tabla temporal
+    # 5) limpiar temporal
     conn.execute(text(f'DROP TABLE IF EXISTS "{schema}"."{tmp}"'))
 
 
 # -------------------------------------------------------------------
-# API de “alto nivel” que usan los ETL
+# API de alto nivel
 # -------------------------------------------------------------------
 def ensure_schemas(conn: Connection, raw_schema: str, core_schema: str) -> None:
     ensure_schema(conn, raw_schema)
