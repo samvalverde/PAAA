@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: paaa_backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - FLASK_ENV=development
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: paaa_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:15
+    container_name: paaa_db
+    restart: always
+    environment:
+      POSTGRES_USER: paaa_user
+      POSTGRES_PASSWORD: paaa_pass
+      POSTGRES_DB: paaa_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  db_data:

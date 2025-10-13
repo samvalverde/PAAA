@@ -1,0 +1,13 @@
+Accesos
+
+Servicio	    URL local	                Puerto
+Frontend	    http://localhost:5173       5173 → Nginx
+Backend	        http://localhost:5000	    5000
+DB (Postgres)	localhost	                5432
+
+
+Comportamiento esperado
+
+- Si modificás código del frontend y lo rebuildás → Vite recompila con docker compose build frontend.
+- Si modificás Flask → basta reiniciar el contenedor backend.
+- PostgreSQL mantiene los datos gracias al volumen db_data.
