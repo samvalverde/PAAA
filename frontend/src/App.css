@@ -1,7 +1,8 @@
 #root {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  margin-top: 1rem;
+  padding-left: 2rem;
   text-align: center;
 }
 
@@ -42,5 +43,10 @@
 }
 
 .space{
-  margin-top: 6px;
+  margin-top: 1.5rem;
+}
+
+.btn{
+  background-color:#646cffaa;
+  color: white;
 }
