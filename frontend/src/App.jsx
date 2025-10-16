@@ -1,9 +1,10 @@
-import { useState } from 'react'
 import { Routes, Route } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 
 import Dashboard from './pages/Admin/Dashboard/Dashboard';
 import Procesos from './pages/Admin/Procesos/Procesos';
+import Proyecto from './pages/Admin/Proyecto/Proyecto';
+import Usuarios from './pages/Admin/Usuarios/Usuarios';
 
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
@@ -16,7 +17,7 @@ import 'primeicons/primeicons.css';
 
 import './App.css'
 
-function login() {
+function Login() {
   const navigate = useNavigate();
 
   const handleLogin = () => {
@@ -56,9 +57,11 @@ function login() {
 function App() {
   return (
       <Routes>
-        <Route path="/" element={login()} />
+        <Route path="/" element={<Login/>} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/procesos" element={<Procesos />} />
+        <Route path="/proyecto" element={<Proyecto />} />
+        <Route path="/usuarios" element={<Usuarios />} />
       </Routes>
   );
 }

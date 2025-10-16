@@ -5,9 +5,9 @@
   align-items: center;
   justify-content: flex-start;
   background-color: #f8f9fa;
-  height: 100vh;              /* 👈 fixed full height */
-  width: 100vw;               /* 👈 fixed full width */
-  overflow-x: hidden;           /* prevent page scrollbars */
+  height: 100vh;              
+  width: 100vw;               
+  overflow-x: hidden;           
   padding: 2rem 0;
   box-sizing: border-box;
 }

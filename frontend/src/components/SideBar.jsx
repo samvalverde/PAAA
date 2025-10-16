@@ -18,7 +18,7 @@ const SideBar = ({ visible, onHide }) => {
             </li>
             <li>
                 <i className="pi pi-user" style={{ marginRight: '8px' }}></i>
-                <Link to="/usuarios" onClick={onHide} style={{ textDecoration: 'none', color: '#333' }}>Profile</Link>
+                <Link to="/usuarios" onClick={onHide} style={{ textDecoration: 'none', color: '#333' }}>Usuarios</Link>
             </li>
         </ul>
     </Sidebar>

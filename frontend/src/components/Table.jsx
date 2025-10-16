@@ -11,8 +11,11 @@ import { Button } from 'primereact/button';
 import { Calendar } from 'primereact/calendar';
 import { MultiSelect } from 'primereact/multiselect';
 import { Tag } from 'primereact/tag';
+import { useNavigate } from 'react-router-dom';
+import './Table.css';
 
 export default function AdvancedFilter() {
+    const navigate = useNavigate();
     const [customers, setCustomers] = useState(null);
     const [filters, setFilters] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -25,7 +28,9 @@ export default function AdvancedFilter() {
         { name: 'Laura Fernández', image: 'elwinsharvill.png' }
     ]);
     const [estados] = useState(['pendiente', 'en progreso', 'completado', 'cancelado']);
-    const [unidades] = useState(['Ventas', 'Marketing', 'TI', 'Recursos Humanos', 'Finanzas']);
+    const [unidades] = useState(['Forestal', 'Computación', 'Diseño', 'Ambiental', 'Biotecnología']);
+    const [selectedProcess, setSelectedProcess] = useState(null);
+    
 
     const getSeverity = (estado) => {
         switch (estado) {
@@ -89,8 +94,10 @@ export default function AdvancedFilter() {
 
     const renderHeader = () => {
         return (
-            <div className="flex justify-content-between">
-                <Button type="button" icon="pi pi-filter-slash" label="Limpiar" outlined onClick={clearFilter} />
+            <div className="header">
+                <div>
+                    <Button type="button" icon="pi pi-filter-slash" label="Limpiar" outlined onClick={clearFilter} />
+                </div>
                 <IconField iconPosition="left">
                     <InputIcon className="pi pi-search" />
                     <InputText value={globalFilterValue} onChange={onGlobalFilterChange} placeholder="Búsqueda general" />
@@ -109,13 +116,13 @@ export default function AdvancedFilter() {
 
     const unidadFilterTemplate = (options) => {
         return (
-            <Dropdown 
-                value={options.value} 
-                options={unidades} 
-                onChange={(e) => options.filterCallback(e.value)} 
-                placeholder="Seleccionar Unidad" 
-                className="p-column-filter" 
-                showClear 
+            <Dropdown
+                value={options.value}
+                options={unidades}
+                onChange={(e) => options.filterCallback(e.value)}
+                placeholder="Seleccionar Unidad"
+                className="p-column-filter"
+                showClear
             />
         );
     };
@@ -133,14 +140,14 @@ export default function AdvancedFilter() {
 
     const responsableFilterTemplate = (options) => {
         return (
-            <MultiSelect 
-                value={options.value} 
-                options={responsables} 
-                itemTemplate={responsablesItemTemplate} 
-                onChange={(e) => options.filterCallback(e.value)} 
-                optionLabel="name" 
-                placeholder="Seleccionar Responsable" 
-                className="p-column-filter" 
+            <MultiSelect
+                value={options.value}
+                options={responsables}
+                itemTemplate={responsablesItemTemplate}
+                onChange={(e) => options.filterCallback(e.value)}
+                optionLabel="name"
+                placeholder="Seleccionar Responsable"
+                className="p-column-filter"
             />
         );
     };
@@ -160,12 +167,12 @@ export default function AdvancedFilter() {
 
     const periodoFilterTemplate = (options) => {
         return (
-            <Calendar 
-                value={options.value} 
-                onChange={(e) => options.filterCallback(e.value, options.index)} 
-                dateFormat="mm/yy" 
-                placeholder="mm/aaaa" 
-                view="month" 
+            <Calendar
+                value={options.value}
+                onChange={(e) => options.filterCallback(e.value, options.index)}
+                dateFormat="mm/yy"
+                placeholder="mm/aaaa"
+                view="month"
             />
         );
     };
@@ -176,14 +183,14 @@ export default function AdvancedFilter() {
 
     const estadoFilterTemplate = (options) => {
         return (
-            <Dropdown 
-                value={options.value} 
-                options={estados} 
-                onChange={(e) => options.filterCallback(e.value, options.index)} 
-                itemTemplate={estadoItemTemplate} 
-                placeholder="Seleccionar Estado" 
-                className="p-column-filter" 
-                showClear 
+            <Dropdown
+                value={options.value}
+                options={estados}
+                onChange={(e) => options.filterCallback(e.value, options.index)}
+                itemTemplate={estadoItemTemplate}
+                placeholder="Seleccionar Estado"
+                className="p-column-filter"
+                showClear
             />
         );
     };
@@ -198,34 +205,86 @@ export default function AdvancedFilter() {
 
     const fechaActualizacionFilterTemplate = (options) => {
         return (
-            <Calendar 
-                value={options.value} 
-                onChange={(e) => options.filterCallback(e.value, options.index)} 
-                dateFormat="dd/mm/yy" 
-                placeholder="dd/mm/aaaa" 
+            <Calendar
+                value={options.value}
+                onChange={(e) => options.filterCallback(e.value, options.index)}
+                dateFormat="dd/mm/yy"
+                placeholder="dd/mm/aaaa"
                 showTime
                 hourFormat="24"
             />
         );
     };
 
+    const handleRedirect = () => {
+        if (selectedProcess) {
+            navigate('/proyecto', { state: { process: selectedProcess } });
+        } else {
+            console.log('No process selected');
+        }
+    };
+
     const header = renderHeader();
+
+    // You feed the data to fill the table via the `customers` state.
+    // For example, you can fetch or set your data in a useEffect:
+    useEffect(() => {
+        setLoading(true);
+        // Replace this with your data fetching logic
+        // Example static data:
+        setCustomers([
+            {
+                id: 1,
+                nombre: 'Proyecto A',
+                unidad: 'Forestal',
+                responsable: responsables[0],
+                periodo: new Date(2024, 5, 1),
+                estado: 'pendiente',
+                fecha_actualizacion: new Date(2024, 5, 10, 14, 30)
+            },
+            {
+                id: 2,
+                nombre: 'Proyecto B',
+                unidad: 'Agrícola',
+                responsable: responsables[1],
+                periodo: new Date(2024, 5, 1),
+                estado: 'en_progreso',
+                fecha_actualizacion: new Date(2024, 5, 10, 14, 30)
+            },
+            {
+                id: 3,
+                nombre: 'Proyecto C',
+                unidad: 'Ambiental',
+                responsable: responsables[2],
+                periodo: new Date(2024, 5, 1),
+                estado: 'completado',
+                fecha_actualizacion: new Date(2024, 5, 10, 14, 30)
+            },
+            // ...more rows
+        ]);
+        setLoading(false);
+        initFilters();
+    }, []);
 
     return (
         <div className="card">
-            <DataTable 
-                value={customers} 
-                paginator 
-                showGridlines 
-                rows={10} 
-                loading={loading} 
-                dataKey="id" 
-                filters={filters} 
-                globalFilterFields={['nombre', 'unidad', 'responsable.name', 'estado']} 
+            <DataTable
+                value={customers}
+                paginator
+                showGridlines
+                rows={10}
+                loading={loading}
+                dataKey="id"
+                filters={filters}
+                globalFilterFields={['nombre', 'unidad', 'responsable.name', 'estado']}
                 header={header}
-                emptyMessage="No se encontraron registros." 
+                emptyMessage="No se encontraron registros."
                 onFilter={(e) => setFilters(e.filters)}
+                selectionMode="single"
+                selection={selectedProcess}
+                onSelectionChange={(e) => setSelectedProcess(e.value)}
             >
+                <Column selectionMode='single' headerStyle={{ width: '3rem', minWidth: '3rem' }} />
                 <Column field="nombre" header="Nombre" filter filterPlaceholder="Buscar por nombre" style={{ minWidth: '14rem' }} />
                 <Column header="Periodo" filterField="periodo" dataType="date" style={{ minWidth: '10rem' }} body={periodoBodyTemplate} filter filterElement={periodoFilterTemplate} />
                 <Column header="Unidad" filterField="unidad" style={{ minWidth: '12rem' }} body={unidadBodyTemplate} filter filterElement={unidadFilterTemplate} />
@@ -234,6 +293,7 @@ export default function AdvancedFilter() {
                     body={responsableBodyTemplate} filter filterElement={responsableFilterTemplate} />
                 <Column header="Última Actualización" filterField="fecha_actualizacion" dataType="date" style={{ minWidth: '14rem' }} body={fechaActualizacionBodyTemplate} filter filterElement={fechaActualizacionFilterTemplate} />
             </DataTable>
+            <Button type="button" label="Ver" icon="pi pi-external-link" onClick={handleRedirect} disabled={!selectedProcess} className="mt-2" />
         </div>
     );
 }
