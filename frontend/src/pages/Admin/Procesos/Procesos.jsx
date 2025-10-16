@@ -4,8 +4,6 @@ import { Card } from 'primereact/card';
 import { InputText } from 'primereact/inputtext';
 import { FileUpload } from 'primereact/fileupload';
 import { Button } from 'primereact/button';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
 import SideBar from '../../../components/SideBar';
 import './Procesos.css';
 import { FloatLabel } from 'primereact/floatlabel';
