@@ -81,6 +81,26 @@ services:
     networks:
       default:
         aliases: [dbetl]
+        
+  backend:
+      build: ./backend
+      container_name: paaa_backend
+      ports:
+        - "5000:5000"
+      volumes:
+        - ./backend:/app
+      environment:
+        - FLASK_ENV=development
+      depends_on:
+        - db
+
+  frontend:
+      build: ./frontend
+      container_name: paaa_frontend
+      ports:
+        - "5173:80"
+      depends_on:
+        - backend
   
 
 volumes:

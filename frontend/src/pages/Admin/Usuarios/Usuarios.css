@@ -1,0 +1,122 @@
+.usuarios-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background-color: #f8f9fa;
+    height: 100vh;
+    width: 100vw;
+    overflow-x: hidden;
+    padding: 2rem 0;
+    box-sizing: border-box;
+}
+
+.page-title {
+    color: #495057;
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+.main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 400px;
+}
+
+.user-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr auto;
+    gap: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 400px;
+}
+
+.user {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.header{
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.user-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.user-card2{
+    width: 100%;
+    box-sizing: border-box;
+    height: 90%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.user-accordion {
+    width: 100%;
+    max-width: 1100px;
+    height: calc(100vh - 6rem);
+    margin: 0 auto;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Each accordion tab area */
+.user-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Form inputs */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .user-accordion {
+        max-width: 90%;
+    }
+}
+
+
+@media (max-width: 768px) {
+    .usuarios-container {
+        padding: 1rem 0;
+    }
+
+    .user-accordion {
+        max-width: 95%;
+        height: calc(100vh - 5rem);
+    }
+
+    .user {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+    }
+}
