@@ -66,7 +66,7 @@ create table documents (
   title text not null,
   storage_key text not null,
   created_at timestamptz not null default now(),
-  constraint pk_documents primary key (id, ver)
+  constraint pk_documents primary key (id, ver),
   constraint uq_documents__storage_key unique (storage_key),
   constraint fk_documents__user foreign key (user_id) references users(id) on delete restrict,
   constraint fk_documents__process foreign key (process_id) references processes(id) on delete restrict
