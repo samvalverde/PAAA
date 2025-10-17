@@ -1,38 +1,115 @@
-version: "3.9"
+version: "3.8"
 
 services:
-  backend:
-    build: ./backend
-    container_name: paaa_backend
+  agente:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
     ports:
-      - "5000:5000"
-    volumes:
-      - ./backend:/app
+      - 8000:8000
     environment:
-      - FLASK_ENV=development
+      PG_DSN: postgresql+psycopg2://etl_user:etl_pass@database_etl:5432/paaa_etl
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minio123
+      MINIO_BUCKET: paaa
+      MINIO_SECURE: "false"
     depends_on:
-      - db
+      database_etl:
+        condition: service_healthy
+
+  database:
+    image: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    ports:
+      - 5432:5432
+    networks:
+      - default
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "user", "-d", "db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: miguel@correo.com
+      PGADMIN_DEFAULT_PASSWORD: test
+    ports:
+      - 5050:80
+    depends_on:
+      - database
+
+
+  minio:
+    image: minio/minio
+    environment:
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minio123
+    command: server /data --console-address ":9001"
+    ports:
+      - 9000:9000
+      - 9001:9001
+    volumes:
+      - minio-data:/data
+      - ./MINIO/init.sh:/usr/local/bin/init-minio.sh
+    networks:
+      - default
+    depends_on:
+      - agente
+  
+  database_etl:
+    image: postgres:16-alpine
+    container_name: database_etl
+    environment:
+      POSTGRES_USER: etl_user
+      POSTGRES_PASSWORD: etl_pass
+      POSTGRES_DB: paaa_etl
+    volumes:
+      - pgdata_etl:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U etl_user -d paaa_etl"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      default:
+        aliases: [dbetl]
+        
+#  backend:
+#    build: ./backend
+#    container_name: paaa_backend
+#    ports:
+#      - "5000:5000"
+#    volumes:
+#      - ./backend:/app
+#    environment:
+#      - FLASK_ENV=development
+#    depends_on:
+#      - database
 
   frontend:
     build: ./frontend
     container_name: paaa_frontend
     ports:
       - "5173:80"
-    depends_on:
-      - backend
-
-  db:
-    image: postgres:15
-    container_name: paaa_db
-    restart: always
-    environment:
-      POSTGRES_USER: paaa_user
-      POSTGRES_PASSWORD: paaa_pass
-      POSTGRES_DB: paaa_db
-    volumes:
-      - db_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+#    depends_on:
+#      - backend
+  
 
 volumes:
-  db_data:
+  db-data:
+  minio-data:
+  pgdata_etl:
+  
+
+
+secrets:
+  openai_api_key:
+    file: ./secrets/OPENAI_API_KEY
