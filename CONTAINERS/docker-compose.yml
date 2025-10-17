@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+  agente:
+    build:
+      context: .
+      dockerfile: agent/Dockerfile
+    image: updated-agent:latest
+    secrets:
+      - openai_api_key
+    environment:
+      - MODEL=gpt-4o-mini
+    volumes:
+      - ./agent/datos:/app/agent/datos
+      - ./agent/docs:/app/agent/docs
+      - ./output:/app/output
+    command: python agent/estudiantes-ati.py # Esto lo cambiamos en la siguiente iteración
+
+  database:
+    image: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    ports:
+      - 5432:5432
+    networks:
+      - default
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "user", "-d", "db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: miguel@correo.com
+      PGADMIN_DEFAULT_PASSWORD: test
+    ports:
+      - 5050:80
+    depends_on:
+      - db
+
+  minio:
+    image: minio/minio
+    environment:
+      MINIO_ACCESS_KEY: minio
+      MINIO_SECRET_KEY: minio123
+    command: server /data --console-address ":9001"
+    ports:
+      - 9000:9000
+      - 9001:9001
+    volumes:
+      - minio-data:/data
+      - ./MINIO/init.sh:/usr/local/bin/init-minio.sh
+    networks:
+      - default
+    depends_on:
+      - api
+  
+
+volumes:
+  db_data:
+  
+
+
+secrets:
+  openai_api_key:
+    file: ./secrets/OPENAI_API_KEY

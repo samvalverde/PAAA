@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "agent"
+version = "0.1.0"
+description = "Agente de Análisis de Encuestas"
+authors = ["Migue <mcuberov14gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+openai = "^1.40"
+pandas = "^2.2"
+openpyxl = "^3.1"
+matplotlib = "^3.9"
+python-dotenv = "^1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
