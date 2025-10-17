@@ -6,8 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# (si usas poetry, instala; si no, puedes usar pip directamente con requirements)
-# Aquí asumimos poetry porque ya lo tenías
+
 RUN pip install --no-cache-dir poetry==1.8.3
 COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false \
