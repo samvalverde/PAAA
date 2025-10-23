@@ -9,7 +9,7 @@ services:
     ports:
       - 8000:8000
     environment:
-      PG_DSN: postgresql+psycopg2://etl_user:etl_pass@database_etl:5432/paaa_etl
+      PG_DSN: postgresql+psycopg2://postgres:etl_pass@database_etl:5432/paaa_etl        # REVISAR PARA REQUESTS DE POSTMAN
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio123
@@ -36,7 +36,9 @@ services:
       - "5432:5432"
     volumes:
       - db_users_data:/var/lib/postgresql/data
-      - ./db/02-users.sql:/docker-entrypoint-initdb.d/02-users.sql   # Ejecutado automáticamente SOLO la primera vez
+      - ./db:/docker-entrypoint-initdb.d
+      #- ./db/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql   # Ejecutado automáticamente SOLO la primera vez
+      #- ./db/02-users.sql:/docker-entrypoint-initdb.d/02-users.sql   # Ejecutado automáticamente SOLO la primera vez
     networks:
       - app_net
     healthcheck:
