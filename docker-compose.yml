@@ -1,4 +1,7 @@
 services:
+  # -------------------------------------------------------------------
+  # Agente de procesamiento (conecta con la base ETL y MinIO)
+  # -------------------------------------------------------------------
   agente:
     build:
       context: ./agent
@@ -18,6 +21,9 @@ services:
     networks:
       - app_net
 
+  # -------------------------------------------------------------------
+  # Base de datos de usuarios
+  # -------------------------------------------------------------------
   database_users:
     image: postgres:15
     container_name: users-db
@@ -30,6 +36,7 @@ services:
       - "5432:5432"
     volumes:
       - db_users_data:/var/lib/postgresql/data
+      - ./db/02-users.sql:/docker-entrypoint-initdb.d/02-users.sql   # Ejecutado automáticamente SOLO la primera vez
     networks:
       - app_net
     healthcheck:
@@ -38,6 +45,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # -------------------------------------------------------------------
+  # Base de datos ETL (datos procesados)
+  # -------------------------------------------------------------------
   database_etl:
     image: postgres:15
     container_name: etl-db
@@ -50,6 +60,7 @@ services:
       - "5433:5432"
     volumes:
       - db_etl_data:/var/lib/postgresql/data
+      - ./db/02-etl.sql:/docker-entrypoint-initdb.d/02-etl.sql       # Script vacío (temporalmente)
     networks:
       - app_net
     healthcheck:
@@ -58,6 +69,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # -------------------------------------------------------------------
+  # Documentación interna (pgAdmin)
+  # -------------------------------------------------------------------
   pgadmin:
     image: dpage/pgadmin4
     environment:
@@ -71,6 +85,9 @@ services:
     networks:
       - app_net
 
+  # -------------------------------------------------------------------
+  # Almacenamiento de archivos (MinIO)
+  # -------------------------------------------------------------------
   minio:
     image: minio/minio:RELEASE.2024-06-13T22-53-53Z
     container_name: paaa-minio
@@ -89,6 +106,9 @@ services:
     depends_on:
       - agente
 
+  # -------------------------------------------------------------------
+  # Backend (Python / FastAPI)
+  # -------------------------------------------------------------------
   backend:
     build:
       context: ./backend
@@ -106,6 +126,9 @@ services:
     volumes:
       - ./backend:/code
 
+  # -------------------------------------------------------------------
+  # Frontend (React / Vite)
+  # -------------------------------------------------------------------
   frontend:
     build: ./frontend
     container_name: paaa-frontend
@@ -114,6 +137,21 @@ services:
     networks:
       - app_net
 
+# =====================================================================
+# NOTA IMPORTANTE:
+# Los scripts *.sql montados en /docker-entrypoint-initdb.d
+# se ejecutan AUTOMÁTICAMENTE solo la primera vez que se crea
+# el volumen de datos de Postgres. Si ya existe el volumen,
+# no se volverán a ejecutar.
+#
+# Para recargar datos manualmente:
+#    bash scripts/load-data.sh
+#
+# Para forzar reejecución automática (reinicialización completa):
+#    docker compose down -v
+#    docker compose up --build
+# =====================================================================
+
 # ---------------------------
 # Volúmenes persistentes
 # ---------------------------
@@ -121,13 +159,6 @@ volumes:
   db_users_data:
   db_etl_data:
   minio_data:
-
-# ---------------------------
-# Secretos opcionales
-# ---------------------------
-secrets:
-  openai_api_key:
-    file: ./secrets/OPENAI_API_KEY
 
 # ---------------------------
 # Red compartida
