@@ -1,6 +1,7 @@
-version: "3.8"
-
 services:
+  # -------------------------------------------------------------------
+  # Agente de procesamiento (conecta con la base ETL y MinIO)
+  # -------------------------------------------------------------------
   agente:
     build:
       context: ./agent
@@ -8,7 +9,7 @@ services:
     ports:
       - 8000:8000
     environment:
-      PG_DSN: postgresql+psycopg2://etl_user:etl_pass@database_etl:5432/paaa_etl
+      PG_DSN: postgresql+psycopg2://postgres:etl_pass@database_etl:5432/paaa_etl        # REVISAR PARA REQUESTS DE POSTMAN
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio123
@@ -17,25 +18,62 @@ services:
     depends_on:
       database_etl:
         condition: service_healthy
-
-  database:
-    image: postgres
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: db
-    ports:
-      - 5432:5432
     networks:
-      - default
+      - app_net
+
+  # -------------------------------------------------------------------
+  # Base de datos de usuarios
+  # -------------------------------------------------------------------
+  database_users:
+    image: postgres:15
+    container_name: users-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: paadb_users
+    ports:
+      - "5432:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db_users_data:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d
+      #- ./db/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql   # Ejecutado automáticamente SOLO la primera vez
+      #- ./db/02-users.sql:/docker-entrypoint-initdb.d/02-users.sql   # Ejecutado automáticamente SOLO la primera vez
+    networks:
+      - app_net
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "user", "-d", "db"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
       timeout: 5s
       retries: 5
+
+  # -------------------------------------------------------------------
+  # Base de datos ETL (datos procesados)
+  # -------------------------------------------------------------------
+  database_etl:
+    image: postgres:15
+    container_name: etl-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: paadb_data
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_etl_data:/var/lib/postgresql/data
+      - ./db/02-etl.sql:/docker-entrypoint-initdb.d/02-etl.sql       # Script vacío (temporalmente)
+    networks:
+      - app_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------------
+  # Documentación interna (pgAdmin)
+  # -------------------------------------------------------------------
   pgadmin:
     image: dpage/pgadmin4
     environment:
@@ -44,72 +82,88 @@ services:
     ports:
       - 5050:80
     depends_on:
-      - database
+      - database_users
+      - database_etl
+    networks:
+      - app_net
 
-
+  # -------------------------------------------------------------------
+  # Almacenamiento de archivos (MinIO)
+  # -------------------------------------------------------------------
   minio:
-    image: minio/minio
-    environment:
-      MINIO_ACCESS_KEY: minio
-      MINIO_SECRET_KEY: minio123
+    image: minio/minio:RELEASE.2024-06-13T22-53-53Z
+    container_name: paaa-minio
     command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
     ports:
       - 9000:9000
       - 9001:9001
     volumes:
-      - minio-data:/data
+      - minio_data:/data
       - ./MINIO/init.sh:/usr/local/bin/init-minio.sh
     networks:
-      - default
+      - app_net
     depends_on:
       - agente
-  
-  database_etl:
-    image: postgres:16-alpine
-    container_name: database_etl
-    environment:
-      POSTGRES_USER: etl_user
-      POSTGRES_PASSWORD: etl_pass
-      POSTGRES_DB: paaa_etl
-    volumes:
-      - pgdata_etl:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U etl_user -d paaa_etl"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks:
-      default:
-        aliases: [dbetl]
-        
-#  backend:
-#    build: ./backend
-#    container_name: paaa_backend
-#    ports:
-#      - "5000:5000"
-#    volumes:
-#      - ./backend:/app
-#    environment:
-#      - FLASK_ENV=development
-#    depends_on:
-#      - database
 
+  # -------------------------------------------------------------------
+  # Backend (Python / FastAPI)
+  # -------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+    container_name: paaa-backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8001:8000"
+    depends_on:
+      - database_users
+      - database_etl
+      - minio
+    networks:
+      - app_net
+    volumes:
+      - ./backend:/code
+
+  # -------------------------------------------------------------------
+  # Frontend (React / Vite)
+  # -------------------------------------------------------------------
   frontend:
     build: ./frontend
-    container_name: paaa_frontend
+    container_name: paaa-frontend
     ports:
       - "5173:80"
-#    depends_on:
-#      - backend
-  
+    networks:
+      - app_net
 
+# =====================================================================
+# NOTA IMPORTANTE:
+# Los scripts *.sql montados en /docker-entrypoint-initdb.d
+# se ejecutan AUTOMÁTICAMENTE solo la primera vez que se crea
+# el volumen de datos de Postgres. Si ya existe el volumen,
+# no se volverán a ejecutar.
+#
+# Para recargar datos manualmente:
+#    bash scripts/load-data.sh
+#
+# Para forzar reejecución automática (reinicialización completa):
+#    docker compose down -v
+#    docker compose up --build
+# =====================================================================
+
+# ---------------------------
+# Volúmenes persistentes
+# ---------------------------
 volumes:
-  db-data:
-  minio-data:
-  pgdata_etl:
-  
+  db_users_data:
+  db_etl_data:
+  minio_data:
 
-
-secrets:
-  openai_api_key:
-    file: ./secrets/OPENAI_API_KEY
+# ---------------------------
+# Red compartida
+# ---------------------------
+networks:
+  app_net:
