@@ -13,7 +13,7 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio123
-      MINIO_BUCKET: paaa
+      MINIO_BUCKET: paaa-bucket
       MINIO_SECURE: "false"
     depends_on:
       database_etl:
