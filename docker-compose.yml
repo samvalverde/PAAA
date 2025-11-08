@@ -6,7 +6,7 @@ services:
     ports:
       - 8000:8000
     environment:
-      PG_DSN: postgresql+psycopg2://etl_user:etl_pass@database_etl:5432/paaa_etl
+      PG_DSN: postgresql+psycopg2://postgres:postgres@database_etl:5432/paadb_data
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio123
@@ -17,6 +17,8 @@ services:
         condition: service_healthy
     networks:
       - app_net
+    secrets:
+      - openai_api_key
 
   database_users:
     image: postgres:15
@@ -30,6 +32,8 @@ services:
       - "5432:5432"
     volumes:
       - db_users_data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d
+
     networks:
       - app_net
     healthcheck:
@@ -89,6 +93,7 @@ services:
     depends_on:
       - agente
 
+
   backend:
     build:
       context: ./backend
@@ -106,6 +111,7 @@ services:
     volumes:
       - ./backend:/code
 
+
   frontend:
     build: ./frontend
     container_name: paaa-frontend
@@ -114,23 +120,15 @@ services:
     networks:
       - app_net
 
-# ---------------------------
-# Volúmenes persistentes
-# ---------------------------
+
 volumes:
   db_users_data:
   db_etl_data:
   minio_data:
 
-# ---------------------------
-# Secretos opcionales
-# ---------------------------
-secrets:
-  openai_api_key:
-    file: ./secrets/OPENAI_API_KEY
-
-# ---------------------------
-# Red compartida
-# ---------------------------
 networks:
   app_net:
+
+secrets:
+  openai_api_key:
+    file: ./secrets/openai_api_key
