@@ -1,4 +1,7 @@
 services:
+  # -------------------------------------------------------------------
+  # Agente de procesamiento (conecta con la base ETL y MinIO)
+  # -------------------------------------------------------------------
   agente:
     build:
       context: ./agent
@@ -20,6 +23,9 @@ services:
     secrets:
       - openai_api_key
 
+  # -------------------------------------------------------------------
+  # Base de datos de usuarios
+  # -------------------------------------------------------------------
   database_users:
     image: postgres:15
     container_name: users-db
@@ -33,7 +39,6 @@ services:
     volumes:
       - db_users_data:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d
-
     networks:
       - app_net
     healthcheck:
@@ -42,6 +47,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # -------------------------------------------------------------------
+  # Base de datos ETL (datos procesados)
+  # -------------------------------------------------------------------
   database_etl:
     image: postgres:15
     container_name: etl-db
@@ -54,6 +62,7 @@ services:
       - "5433:5432"
     volumes:
       - db_etl_data:/var/lib/postgresql/data
+      - ./db/02-etl.sql:/docker-entrypoint-initdb.d/02-etl.sql       # Script vacío (temporalmente)
     networks:
       - app_net
     healthcheck:
@@ -62,6 +71,9 @@ services:
       timeout: 5s
       retries: 5
 
+  # -------------------------------------------------------------------
+  # Documentación interna (pgAdmin)
+  # -------------------------------------------------------------------
   pgadmin:
     image: dpage/pgadmin4
     environment:
@@ -75,6 +87,9 @@ services:
     networks:
       - app_net
 
+  # -------------------------------------------------------------------
+  # Almacenamiento de archivos (MinIO)
+  # -------------------------------------------------------------------
   minio:
     image: minio/minio:RELEASE.2024-06-13T22-53-53Z
     container_name: paaa-minio
@@ -93,7 +108,9 @@ services:
     depends_on:
       - agente
 
-
+  # -------------------------------------------------------------------
+  # Backend (Python / FastAPI)
+  # -------------------------------------------------------------------
   backend:
     build:
       context: ./backend
@@ -111,7 +128,9 @@ services:
     volumes:
       - ./backend:/code
 
-
+  # -------------------------------------------------------------------
+  # Frontend (React / Vite)
+  # -------------------------------------------------------------------
   frontend:
     build: ./frontend
     container_name: paaa-frontend
@@ -119,7 +138,6 @@ services:
       - "5173:80"
     networks:
       - app_net
-
 
 volumes:
   db_users_data:

@@ -3,8 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db_users, Base, engine_users
 from app.schemas.user import UserCreate, UserOut
 from app.models.user import User
-from app.core.security import get_password_hash
-from app.core.dependencies import get_current_user
+from app.core.security import get_password_hash, get_current_user
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

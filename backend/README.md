@@ -35,7 +35,7 @@ docker-compose.backend.yml        # ISOLATED: solo backend (SQLite y storage loc
    ```
 3. Accesos:
    - Frontend: http://localhost:5173
-   - Backend: http://localhost:8000 (Docs en `/docs` y `/redoc`)
+   - Backend: http://localhost:8001 (Docs en `/docs` y `/redoc`)
    - DB usuarios (Postgres): localhost:5432
    - DB datos (Postgres): localhost:5433
    - MinIO: http://localhost:9001 (console) | API en :9000
