@@ -1,4 +1,3 @@
-# app/main.py
 from __future__ import annotations
 from typing import Any, Dict, Optional, Literal
 from pydantic import BaseModel, Field
@@ -14,6 +13,7 @@ from agente import agente as run_llm_agent
 from carga import cargar_archivo                     # módulo de carga genérico
 from etl.db import make_engine                      # conexión a Postgres
 from .minio_utils import get_minio, pick_object, download_object  # utilidades MinIO
+from analytics.results import generate_results
 
 # -----------------------------------------------------------------------------
 # Config & App
@@ -56,12 +56,11 @@ class NarrativaRequest(BaseModel):
     enunciado: str = Field(..., description="Objetivo/consigna en lenguaje natural")
     resultados: Dict[str, Any] = Field(..., description="KPIs/tablas ya calculadas")
     poblacion: Poblacion
+    escuela: str = Field(..., description="Nombre de la escuela")
 
 class NarrativaResponse(BaseModel):
-    enunciado: str
-    poblacion: Poblacion
-    prompt_enviado: Optional[str] = None  # para tus pruebas actuales (sin quemar llave)
-    texto: Optional[str] = None           # cuando conectes el LLM real, aquí irá la narrativa
+    texto: Optional[str] = None
+
 
 
 
@@ -175,26 +174,77 @@ def analisis_posgrados(
 def agente_redactar(payload: NarrativaRequest):
     """
     Construye el prompt (ENUNCIADO, RESULTADOS, POBLACIÓN) y lo pasa a tu agente.
-    Por ahora, tu agente devuelve el prompt armado (no llama al LLM).
-    Cuando conectes OpenAI/llama, este mismo endpoint ya te sirve.
+
     """
     try:
-        # Tu agente actual devuelve un string tipo: "Acá iria el prompt {enunciado}, {resultados}, {poblacion}"
+        # Tu agente actual devuelve un string tipo: "Acá iria el prompt {enunciado}, {resultados}, {poblacion}, {escuela}"
         result_str = run_llm_agent(
             payload.enunciado,
             payload.resultados,
+            payload.escuela,
             payload.poblacion.model_dump(),
         )
 
-        # Si más adelante el agente devuelve el TEXTO final en vez del prompt, puedes detectar aquí:
+
+
         is_only_prompt = result_str.startswith("Acá iria el prompt")
 
         return NarrativaResponse(
-            enunciado=payload.enunciado,
-            poblacion=payload.poblacion,
-            prompt_enviado=result_str if is_only_prompt else None,
             texto=None if is_only_prompt else result_str,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+@app.post("/agente/resultados")
+def agente_resultados(payload: dict):
+    """
+    Construye la sección 'resultados' para el agente.
+
+    Espera un body así (ejemplo):
+
+    {
+      "poblacion": {
+        "dataset": "egresados",
+        "programa": "ATI",
+        "filtros": {
+          "anio_graduacion": { "gte": 2020, "lte": 2024 },
+          "sexo": "F"
+        }
+      },
+      "distribuciones": ["sexo", "anio_graduacion"]
+    }
+
+    Devuelve algo de esta forma:
+
+    {
+      "poblacion": { ... },
+      "resultados": {
+        "kpis": { ... },
+        "tablas": { ... },
+        "distribuciones": { ... }
+      }
+    }
+
+    """
+    try:
+        poblacion = payload.get("poblacion")
+        if not poblacion:
+            raise HTTPException(status_code=400, detail="Falta 'poblacion' en el body")
+
+        distribuciones = payload.get("distribuciones") or []
+        tipo_analitica = payload.get("tipo_analitica")
+
+        resultados = generate_results(poblacion, distribuciones, tipo_analitica)
+
+        return {
+            "poblacion": poblacion,
+            "resultados": resultados
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
