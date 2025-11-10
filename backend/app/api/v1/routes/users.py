@@ -1,24 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.core.database import get_db_users, Base, engine_users
 from app.schemas.user import UserCreate, UserOut
 from app.models.user import User
 from app.core.security import get_password_hash, get_current_user
 
-router = APIRouter(prefix="/users", tags=["Users"])
+router = APIRouter()
 
-# Ensure tables exist
-Base.metadata.create_all(bind=engine_users)
-
-@router.get("/me", response_model=UserOut)
+@router.get("/me", tags=["Users"])
 def get_me(current_user=Depends(get_current_user)):
-    return current_user
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "is_active": True,
+        "role": current_user.user_type.type_name if current_user.user_type else None
+    }
 
 @router.post("/", response_model=UserOut, status_code=201)
 def create_user(payload: UserCreate, db: Session = Depends(get_db_users)):
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    user = User(email=payload.email, hashed_password=get_password_hash(payload.password), role=payload.role, is_active=payload.is_active)
+    user = (
+        db.query(User)
+        .options(joinedload(User.user_type))
+        .filter((User.email == payload.email) | (User.username == payload.username))
+        .first()
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -26,19 +33,13 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db_users)):
 
 @router.get("/", response_model=list[UserOut])
 def list_users(db: Session = Depends(get_db_users)):
-    return db.query(User).all()
-
-'''
-desde el frontend o Postman:
-
-Hacer login (POST /auth/login con user/pass)
-
-Copiar el token del JSON que devuelve
-
-Probar /users/me agregando el header:
-
-Authorization: Bearer <TOKEN>
-
-→ Si el token es válido, te devolverá tu usuario.
-→ Si no, error 401 Unauthorized.
-'''
+    users = db.query(User).options(joinedload(User.user_type)).all()
+    return [
+        {
+            "id": u.id,
+            "email": u.email,
+            "is_active": True,
+            "role": u.user_type.type_name if u.user_type else None
+        }
+        for u in users
+    ]

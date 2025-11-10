@@ -1,1 +1,24 @@
 secrets/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual envs ---
+venv/
+.env/
+.venv/
+
+# --- Bytecode cache ---
+*.pyc
+*.pyo
+*.pyd
+
+# --- IDE ---
+.vscode/
+.idea/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
