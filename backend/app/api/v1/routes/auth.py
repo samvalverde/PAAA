@@ -28,3 +28,10 @@ def login(username: str = Form(...), password: str = Form(...), db: Session = De
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer"}
+
+# solo para dev/testing
+@router.post("/hash", tags=["Auth"])
+def generate_hash(password: str = Form(...)):
+    from app.core.security import get_password_hash
+    hashed = get_password_hash(password)
+    return {"password": password, "hash": hashed}
