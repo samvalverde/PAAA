@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.v1.routes import auth, users, health
+from app.api.v1.routes import auth, users, health, statistics
 from app.core.config import get_settings
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,6 +10,7 @@ origins = [
     "http://localhost:5173",  # frontend local
     "http://127.0.0.1:5173",
     # más adelante: dominio en producción (ej. https://paaa.itcr.ac.cr)
+    "http://localhost:5174"
 ]
 
 app.add_middleware(
@@ -35,4 +36,9 @@ app.include_router(
     health.router,
     prefix="/api/v1/health",
     tags=["Health"]
+)
+app.include_router(
+    statistics.router,
+    prefix="/api/v1/stats",
+    tags=["Statistics"]
 )
