@@ -15,6 +15,7 @@ create table users (
   email text unique not null,
   password_hash text not null,
   user_type_id bigint not null,
+  phone_number text,
   school_id bigint,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -42,9 +43,10 @@ create table processes (
   school_id bigint not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  encargado text not null,
+  estado text not null,
   constraint fk_processes__school foreign key (school_id)references schools(id) on delete restrict
 );
-
 
 create table audit_log (
   id bigint generated always as identity primary key,

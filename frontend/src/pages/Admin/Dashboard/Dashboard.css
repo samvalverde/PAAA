@@ -111,6 +111,7 @@
   width: 100%;
   box-sizing: border-box;
   min-height: 400px;
+  overflow-y: scroll;
 }
 
 /* Tasks Section */
