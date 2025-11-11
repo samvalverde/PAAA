@@ -20,6 +20,8 @@ services:
         condition: service_healthy
     networks:
       - app_net
+    secrets:
+      - openai_api_key
 
   # -------------------------------------------------------------------
   # Base de datos de usuarios
@@ -37,8 +39,6 @@ services:
     volumes:
       - db_users_data:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d
-      #- ./db/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql   # Ejecutado automáticamente SOLO la primera vez
-      #- ./db/02-users.sql:/docker-entrypoint-initdb.d/02-users.sql   # Ejecutado automáticamente SOLO la primera vez
     networks:
       - app_net
     healthcheck:
@@ -139,31 +139,14 @@ services:
     networks:
       - app_net
 
-# =====================================================================
-# NOTA IMPORTANTE:
-# Los scripts *.sql montados en /docker-entrypoint-initdb.d
-# se ejecutan AUTOMÁTICAMENTE solo la primera vez que se crea
-# el volumen de datos de Postgres. Si ya existe el volumen,
-# no se volverán a ejecutar.
-#
-# Para recargar datos manualmente:
-#    bash scripts/load-data.sh
-#
-# Para forzar reejecución automática (reinicialización completa):
-#    docker compose down -v
-#    docker compose up --build
-# =====================================================================
-
-# ---------------------------
-# Volúmenes persistentes
-# ---------------------------
 volumes:
   db_users_data:
   db_etl_data:
   minio_data:
 
-# ---------------------------
-# Red compartida
-# ---------------------------
 networks:
   app_net:
+
+secrets:
+  openai_api_key:
+    file: ./secrets/openai_api_key

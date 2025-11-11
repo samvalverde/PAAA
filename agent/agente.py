@@ -1,62 +1,50 @@
-from langchain import hub
+import json
 from langchain.prompts import PromptTemplate
-from langchain_community.chat_models import ChatOllama
-from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_openai import ChatOpenAI
-from pydantic import validator
+from langchain_core.output_parsers import StrOutputParser
+import os
 
+def agente(enunciado, resultados, poblacion, escuela):
+    OPENAI_API_KEY = load_openai_key()
 
-# Ensure no duplicate validator functions
-@validator("BaseLanguageModel", allow_reuse=True)
-def set_verbose(cls, v):
-    return v
+    template = """Eres un importante estadístico que escribe en español y que debe realizar un análisis de una 
+                    pregunta de encuesta aplicada a {poblacion} de la Escuela de {escuela} del 
+                    Tecnológico de Costa Rica. La encuesta tiene como objetivo evaluar las condiciones de la ingeniería para la acreditación estatal.
+                    Debes generar un único párrafo de análisis descriptivo, conciso y claro, usando los porcentajes provistos.
 
+                    Enunciado: {enunciado}
+                    Resultados: {resultados}
+                    """
 
-local_llm = "llama3"
-# Prompt
-# import langchain
-
-# langchain.verbose = True
-
-
-# RESPONSE
-
-def agente(enunciado, resultados, poblacion):
-    return (f"Acá iria el prompt {enunciado}, {resultados}, {poblacion}")
-    '''
-    
-    #Acá tomariamos el key de un secret
-    OPENAI_API_KEY = "secretillo jj"
-    print("python")
-    print(enunciado)
-    # if not isinstance(resultados, list):
-    #     raise TypeError("resultados must be a list")
-    resultados2 = resultados  # "\n".join(resultados)
-    print(resultados2)
     prompt = PromptTemplate(
-        template=f"""Eres un importante estadístico que escribe en español y que debe realizar un análisis de una 
-        pregunta de encuesta aplicada a {poblacion} de la Escuela de Administración de Tecnologías de la Información del 
-        Tecnológico de Costa Rica. La encuesta tiene como objetivo evaluar las 
-        condiciones de la ingeniería para la acreditación estatal. 
-        En esta ocasión debes generar un único párrafo de análisis descriptivo, conciso y claro, para una de 
-        las preguntas del cuestionario, para la cual tienes los datos de las respuestas de los encuestados que están expresados en porcentajes. 
-          
-        En el párrafo debes describir generalmente los datos y varias conclusiones.
-
-      Enunciado de la pregunta de la encuesta: {{question}}
-      Resultados: {{resultados}}
-     """,
-        input_variables=["question", "resultados"],
+        template=template,
+        input_variables=["enunciado", "resultados", "poblacion", "escuela"],
     )
-    # Load model
+
     llm = ChatOpenAI(
         openai_api_key=OPENAI_API_KEY,
-        model_name="gpt-4o-mini",
+        model="gpt-4o-mini",   # usa 'model' en langchain_openai
     )
 
-    # Chain
-    rag_chain = prompt | llm | StrOutputParser()
+    chain = prompt | llm | StrOutputParser()
 
-    generation = rag_chain.invoke({"question": enunciado, "resultados": resultados2})
-    return generation
-'''
+    # Serializa para evitar problemas de llaves y mejorar legibilidad
+    res_str = json.dumps(resultados, ensure_ascii=False)
+    pob_str = json.dumps(poblacion, ensure_ascii=False)
+
+    return chain.invoke({
+        "enunciado": enunciado,
+        "resultados": res_str,
+        "poblacion": pob_str,
+        "escuela": escuela,
+    })
+
+def load_openai_key():
+    key = os.getenv("OPENAI_API_KEY")
+    if key:
+        return key
+    secret_path = "/run/secrets/openai_api_key"
+    if os.path.exists(secret_path):
+        with open(secret_path) as f:
+            return f.read().strip()
+    raise RuntimeError("No se encontró OPENAI_API_KEY (ni env ni secret)")

@@ -1,0 +1,185 @@
+from typing import Any, Dict, List
+import os
+
+import pandas as pd
+from sqlalchemy import text
+
+from etl.db import make_engine
+
+
+def _load_core_dataset(dataset_name: str, core_schema: str | None = None) -> pd.DataFrame:
+    """
+    Carga el dataset desde la base de datos del ETL, leyendo la tabla
+    core.<dataset_name> (o el schema que se indique).
+
+    Usa la misma conexión que el módulo etl (PG_DSN, etc.).
+    """
+    schema = core_schema or os.getenv("CORE_SCHEMA", "core")
+
+    engine = make_engine()
+    query = text(f'SELECT * FROM "{schema}"."{dataset_name}"')
+
+    with engine.connect() as conn:
+        df = pd.read_sql_query(query, conn)
+
+    return df
+
+
+def _apply_filters(df: pd.DataFrame, poblacion: Dict[str, Any]) -> pd.DataFrame:
+    """
+    Aplica 'programa' y 'filtros' de la población sobre el DataFrame.
+
+    Soporta:
+      - valor simple:  {"sexo": "F"}       -> df[df["sexo"] == "F"]
+      - lista:         {"sexo": ["F","M"]} -> df[df["sexo"].isin(["F","M"])]
+      - dict:          {"anio": {"gte": 2020, "lte": 2024}}
+    """
+    # Filtro directo por programa si existe y la columna está en el DF
+    programa = poblacion.get("programa")
+    if programa is not None and "programa" in df.columns:
+        df = df[df["programa"] == programa]
+
+    filtros = poblacion.get("filtros", {}) or {}
+    for col, cond in filtros.items():
+        if col not in df.columns:
+            # Si la columna no existe, ignoramos ese filtro
+            continue
+
+        serie = df[col]
+
+        # 1) Valor simple -> igualdad
+        if isinstance(cond, (str, int, float, bool)):
+            df = df[serie == cond]
+
+        # 2) Lista -> IN
+        elif isinstance(cond, list):
+            df = df[serie.isin(cond)]
+
+        # 3) Dict de operadores
+        elif isinstance(cond, dict):
+            if "eq" in cond:
+                df = df[serie == cond["eq"]]
+            if "neq" in cond:
+                df = df[serie != cond["neq"]]
+            if "gte" in cond:
+                df = df[serie >= cond["gte"]]
+            if "lte" in cond:
+                df = df[serie <= cond["lte"]]
+            if "gt" in cond:
+                df = df[serie > cond["gt"]]
+            if "lt" in cond:
+                df = df[serie < cond["lt"]]
+            if "in" in cond:
+                df = df[serie.isin(cond["in"])]
+
+    return df
+
+
+def _compute_nps(series: pd.Series) -> float:
+    """
+    Calcula NPS asumiendo escala 1–10 o 0–10.
+
+    Regla estándar:
+      - Detractores: <= 6
+      - Neutros: 7–8
+      - Promotores: 9–10
+
+    Devuelve NPS en porcentaje (ej. 47.0).
+    """
+    s = pd.to_numeric(series, errors="coerce").dropna()
+    if s.empty:
+        return 0.0
+
+    detractores = (s <= 6).sum()
+    promotores = (s >= 9).sum()
+    total = len(s)
+    return (promotores - detractores) * 100.0 / total if total else 0.0
+
+
+def generate_general_summary(poblacion: Dict[str, Any],
+                             distribuciones: List[str]) -> Dict[str, Any]:
+    """
+    Genera un resumen general de la población filtrada leyendo directamente
+    de la base del ETL (schema core).
+
+    Espera que `poblacion` tenga al menos:
+      - dataset: nombre de la tabla en el schema core (ej. "egresados")
+      - opcional: programa
+      - opcional: filtros {columna: valor / lista / {gte,lte,...}}
+
+    `distribuciones` es una lista de nombres de columnas para las que se
+    quiere la distribución (conteos por valor).
+
+    Devuelve un dict con:
+    {
+        "kpis": { ... },
+        "tablas": { ... },
+        "distribuciones": { ... }
+    }
+    """
+    dataset_name = poblacion.get("dataset")
+    if not dataset_name:
+        raise ValueError("La población no contiene el campo 'dataset'.")
+
+    # 1) Cargar datos desde core.<dataset_name> y aplicar filtros
+    df = _load_core_dataset(dataset_name)
+    df = _apply_filters(df, poblacion)
+
+    # Actualizamos n en la población si no viene; esto se devuelve al cliente
+    n = len(df)
+    if "n" not in poblacion:
+        poblacion["n"] = n
+
+    # 2) KPIs básicos
+    kpis: Dict[str, Any] = {
+        "total_registros": n
+    }
+
+    # Pregunta de satisfacción "estrella" si existe; en tu survey ATI es ep07_18
+    sat_col = "ep07_18"
+    if sat_col in df.columns:
+        sat_vals = pd.to_numeric(df[sat_col], errors="coerce")
+        if sat_vals.notna().any():
+            kpis["satisfaccion_media_ep07_18"] = float(sat_vals.mean(skipna=True))
+            kpis["nps"] = float(_compute_nps(sat_vals))
+
+    # 3) Tablas de composición (por ahora, posgrados si existe)
+    tablas: Dict[str, Any] = {}
+
+    if "posgrado" in df.columns:
+        vc = df["posgrado"].value_counts(dropna=False)
+        total_posgrados = vc.sum()
+        filas_posgrados = []
+        for nombre, conteo in vc.items():
+            if pd.isna(nombre):
+                nombre = "Sin especificar"
+            porcentaje = (conteo * 100.0 / total_posgrados) if total_posgrados else 0.0
+            filas_posgrados.append({
+                "posgrado": str(nombre),
+                "total": int(conteo),
+                "porcentaje": round(porcentaje, 1),
+            })
+        tablas["posgrados"] = filas_posgrados
+
+    ## Aca se puede expandir mas tablas si se quiere
+
+    # 4) Distribuciones solicitadas
+    distribuciones_resultado: Dict[str, Any] = {}
+    for variable in distribuciones:
+        if variable not in df.columns:
+            # Si el cliente pide una distribución de una columna que no existe,
+            # simplemente la ignoramos.
+            continue
+
+        vc = df[variable].value_counts(dropna=False).sort_index()
+        dist = {}
+        for valor, conteo in vc.items():
+            clave = "NA" if pd.isna(valor) else str(valor)
+            dist[clave] = int(conteo)
+        distribuciones_resultado[variable] = dist
+
+    return {
+        "kpis": kpis,
+        "tablas": tablas,
+        "distribuciones": distribuciones_resultado,
+    }
