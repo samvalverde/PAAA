@@ -15,6 +15,7 @@ create table users (
   email text unique not null,
   password_hash text not null,
   user_type_id bigint not null,
+  phone_number text,
   school_id bigint,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
