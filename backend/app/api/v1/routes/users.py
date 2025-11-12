@@ -39,6 +39,8 @@ def list_users(db: Session = Depends(get_db_users)):
             "id": u.id,
             "email": u.email,
             "is_active": True,
+            "username": u.username,
+            "phone": u.phone_number,
             "role": u.user_type.type_name if u.user_type else None
         }
         for u in users

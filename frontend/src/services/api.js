@@ -158,3 +158,14 @@ export const healthAPI = {
   checkDatabaseETL: async () => fetchAPI('/health/db_etl'),
   checkMinio: async () => fetchAPI('/health/minio'),
 };
+
+
+// =========================================
+// User API
+// =========================================
+
+export const UserListAPI={
+  getUserList: ()=>{
+    return(fetchAPI("/users/"))
+  }
+}

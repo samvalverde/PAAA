@@ -69,7 +69,6 @@ SELECT * FROM (
     ('juan.coord',    'juan.coord@example.com',    'changeme', (SELECT coord_id FROM ut), (SELECT eic_id FROM sc)),
     ('luis.coord',    'luis.coord@example.com',    'changeme', (SELECT coord_id FROM ut), (SELECT mat_id FROM sc)),
     ('sofia.coord',   'sofia.coord@example.com',   'changeme', (SELECT coord_id FROM ut), (SELECT elec_id FROM sc)),
-
     ('ana.visor',     'ana.visor@example.com',     'changeme', (SELECT visor_id FROM ut), (SELECT eic_id FROM sc)),
     ('pedro.visor',   'pedro.visor@example.com',   'changeme', (SELECT visor_id FROM ut), (SELECT mat_id FROM sc)),
     ('diego.visor',   'diego.visor@example.com',   'changeme', (SELECT visor_id FROM ut), (SELECT elec_id FROM sc)),

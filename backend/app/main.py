@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.v1.routes import auth, users, health, statistics
+from app.api.v1.routes import auth, users, health, statistics, proc
 from app.core.config import get_settings
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -41,4 +41,9 @@ app.include_router(
     statistics.router,
     prefix="/api/v1/stats",
     tags=["Statistics"]
+)
+app.include_router(
+    proc.router,
+    prefix="/api/v1/proc",
+    tags=["Processes"]
 )
