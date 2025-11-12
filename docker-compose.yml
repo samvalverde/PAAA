@@ -37,8 +37,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db/users:/docker-entrypoint-initdb.d
       - db_users_data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d
     networks:
       - app_net
     healthcheck:
@@ -61,8 +61,8 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - ./db/etl:/docker-entrypoint-initdb.d
       - db_etl_data:/var/lib/postgresql/data
+      - ./db/02-etl.sql:/docker-entrypoint-initdb.d/02-etl.sql       # Script vacío (temporalmente)
     networks:
       - app_net
     healthcheck:
