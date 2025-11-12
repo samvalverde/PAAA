@@ -6,7 +6,7 @@ import { Chart } from "primereact/chart";
 import { Dropdown } from "primereact/dropdown";
 import { StatsCard, ErrorCard } from "../../../components/StatsCard";
 import { QuestionChart } from "../../../components/QuestionChart";
-import { statisticsAPI } from "../../../services/api";
+import { statisticsAPI, UserListAPI } from "../../../services/api";
 import { Checkbox } from "primereact/checkbox";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -84,13 +84,13 @@ const Dashboard = () => {
   // State for filters
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [selectedVersion, setSelectedVersion] = useState(null);
-  const [programs, setPrograms] = useState([]);
 
   // State for data
   const [kpis, setKpis] = useState(null);
   const [genderData, setGenderData] = useState(null);
   const [satisfactionData, setSatisfactionData] = useState(null);
   const [responsesPerProgram, setResponsesPerProgram] = useState(null);
+  const [users, setUsers] = useState([]);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -100,15 +100,16 @@ const Dashboard = () => {
 
   // Fetch available programs
   useEffect(() => {
-    const fetchPrograms = async () => {
+    const fetchUsers = async ()=>{
       try {
-        const data = await statisticsAPI.getPrograms();
-        setPrograms(data.programs.map((p) => ({ label: p, value: p })));
-      } catch (err) {
-        console.error("Error fetching programs:", err);
+        const data = await UserListAPI.getUserList();
+        setUsers(data)
+        console.log("datos: ",data)
+      } catch (error) {
+        console.log("Error al encontrar Usuarios")
       }
-    };
-    fetchPrograms();
+    }
+    fetchUsers()
   }, []);
 
   // Fetch dashboard data
@@ -291,13 +292,15 @@ const Dashboard = () => {
           {/* Contacts Table Section */}
           <Card title="Recent Contacts" className="section-card table-section">
             <DataTable
-              value={contacts}
+              value={users}
               responsiveLayout="scroll"
               className="contacts-table"
             >
-              <Column field="name" header="Name" sortable></Column>
+              <Column field="username" header="Nombre" sortable></Column>
+              <Column field="role" header="Rol" sortable></Column>
+              <Column field="phone" header= "Phone Number"></Column>
               <Column field="email" header="Email" sortable></Column>
-              <Column field="status" header="Status" sortable></Column>
+              <Column field="is_active" header="Status" sortable></Column>
             </DataTable>
           </Card>
         </div>
