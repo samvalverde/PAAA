@@ -35,7 +35,7 @@ VALUES
   ('visor')
 ON CONFLICT (type_name) DO NOTHING;
 
--- ====== Permissions ======
+-- ====== Permissions (opcional si la tabla existe) ======
 INSERT INTO permissions (permission_name, description)
 VALUES
   ('view_processes', 'Puede ver los procesos del sistema'),
@@ -47,97 +47,63 @@ ON CONFLICT (permission_name) DO NOTHING;
 -- ====== Usuarios ======
 -- Hash bcrypt válido para "changeme"
 -- "$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G"
-INSERT INTO users (username, email, password_hash, phone_number, user_type_id, school_id, is_active, created_at, updated_at)
+
+INSERT INTO users (username, email, password_hash, user_type_id, school_id, created_at)
 VALUES
   ('maria.admin',   'maria.admin@example.com',   '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880001',
    (SELECT id FROM user_types WHERE type_name = 'admin'),
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   TRUE,
-   NOW(), NOW()),
+   NOW()),
 
-  ('samuel.admin',  'samuel.admin@example.com',  '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880002',
+   ('samuel.admin',   'samuel.admin@example.com',   '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
    (SELECT id FROM user_types WHERE type_name = 'admin'),
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   TRUE,
-   NOW(), NOW()),
+   NOW()),
 
   ('juan.colab',    'juan.colab@example.com',    '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880003',
    (SELECT id FROM user_types WHERE type_name = 'colaborador'),
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   TRUE,
-   NOW(), NOW()),
+   NOW()),
+
+   ('andrea.colab',    'andrea.colab@example.com',    '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
+   (SELECT id FROM user_types WHERE type_name = 'colaborador'),
+   (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
+   NOW()),
 
   ('ana.visor',     'ana.visor@example.com',     '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880004',
    (SELECT id FROM user_types WHERE type_name = 'visor'),
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   TRUE,
-   NOW(), NOW()),
+   NOW()),
 
   ('roberto.colab', 'roberto.colab@example.com', '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880005',
    (SELECT id FROM user_types WHERE type_name = 'colaborador'),
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería Electrónica'),
-   TRUE,
-   NOW(), NOW()),
+   NOW()),
 
   ('elena.visor',   'elena.visor@example.com',   '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880006',
    (SELECT id FROM user_types WHERE type_name = 'visor'),
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería Electrónica'),
-   TRUE,
-   NOW(), NOW())
+   NOW())
 ON CONFLICT (email) DO NOTHING;
 
 -- ====== Procesos ======
+-- Se vinculan con usuarios mediante SELECT dinámico
+-- Estado puede ser: 'pendiente', 'en_progreso', 'completado'
+
 INSERT INTO processes (process_name, school_id, encargado_id, estado, created_at, updated_at)
 VALUES
   ('Acreditación 2025',
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
    (SELECT id FROM users WHERE username = 'juan.colab'),
-   'Pendiente', NOW(), NOW()),
+   'pendiente', NOW(), NOW()),
 
   ('Autoevaluación 2025',
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   (SELECT id FROM users WHERE username = 'maria.admin'),
-   'Completado', NOW(), NOW()),
+   (SELECT id FROM users WHERE username = 'andrea.colab'),
+   'completado', NOW(), NOW()),
 
   ('Plan de mejora 2026',
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería Electrónica'),
    (SELECT id FROM users WHERE username = 'roberto.colab'),
-   'En_proceso', NOW(), NOW())
+   'en_progreso', NOW(), NOW())
 ON CONFLICT (process_name) DO NOTHING;
-
--- ====== Tipos de Acción ======
-INSERT INTO action_types (name, description)
-VALUES
-  ('crear_proceso', 'Creación de un nuevo proceso'),
-  ('modificar_proceso', 'Modificación de un proceso existente'),
-  ('eliminar_proceso', 'Eliminación de un proceso'),
-  ('asignar_encargado', 'Asignación de un encargado a un proceso')
-ON CONFLICT (name) DO NOTHING;
-
--- ====== Acciones ======
-INSERT INTO actions (user_id, process_id, action_type_id, timestamp)
-VALUES
-  (
-    (SELECT id FROM users WHERE username = 'maria.admin'),
-    (SELECT id FROM processes WHERE process_name = 'Autoevaluación 2025'),
-    (SELECT id FROM action_types WHERE name = 'crear_proceso'),
-    NOW()
-  ),
-  ( 
-    (SELECT id FROM users WHERE username = 'juan.colab'),
-    (SELECT id FROM processes WHERE process_name = 'Acreditación 2025'),
-    (SELECT id FROM action_types WHERE name = 'asignar_encargado'),
-    NOW()
-  ),
-  (
-    (SELECT id FROM users WHERE username = 'roberto.colab'),
-    (SELECT id FROM processes WHERE process_name = 'Plan de mejora 2026'),
-    (SELECT id FROM action_types WHERE name = 'modificar_proceso'),
-    NOW()
-  )

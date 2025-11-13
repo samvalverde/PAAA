@@ -1,8 +1,8 @@
 from fastapi import FastAPI
-from app.api.v1.routes import auth, users, health, statistics, process
+from app.api.v1.routes import auth, users, health, statistics, proc
 from app.core.config import get_settings
 from fastapi.middleware.cors import CORSMiddleware
- 
+
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="1.0.0")
 
@@ -21,50 +21,29 @@ app.add_middleware(
     allow_headers=["*"],                # qué headers se permiten
 )
 
-# ============================ Rutas ============================
-
-# ============================ AUTH ============================
+# Rutas
 app.include_router(
     auth.router,
     prefix="/api/v1/auth",
     tags=["Auth"]
 )
-
-# ============================ USERS ============================
 app.include_router(
     users.router,
     prefix="/api/v1/users",
     tags=["Users"]
 )
-
-# ============================ HEALTH ============================
 app.include_router(
     health.router,
     prefix="/api/v1/health",
     tags=["Health"]
 )
- 
-# ============================ STATISTICS ============================
 app.include_router(
     statistics.router,
     prefix="/api/v1/stats",
     tags=["Statistics"]
 )
-
-# ============================ PROCESSES ============================
 app.include_router(
-    process.router,
-    prefix="/api/v1/process",
+    proc.router,
+    prefix="/api/v1/proc",
     tags=["Processes"]
 )
-
-# ============================ REPORTS ============================
-# (Por implementar)
-
-# ============================ AUDITS ============================
-# (Por implementar)
-
-# ============================ Root Endpoint ============================
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the PAAA API"}

@@ -10,7 +10,6 @@ __pycache__/
 venv/
 .env/
 .venv/
-backend/.env
 
 # --- Bytecode cache ---
 *.pyc
@@ -26,4 +25,3 @@ backend/.env
 Thumbs.db
 
 db/mock-data.sql
-

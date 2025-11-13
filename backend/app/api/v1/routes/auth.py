@@ -6,15 +6,25 @@ from passlib.context import CryptContext
 from app.core.database import get_db_users
 from app.models.user import User
 from app.core.config import get_settings
-from app.core.security import get_current_user, verify_password
+from app.core.security import get_current_user
 import logging
 
-router = APIRouter(tags=["Auth"])
+router = APIRouter()
 settings = get_settings()
-# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 logger = logging.getLogger(__name__)
 
 # --- Password helpers ---
+def verify_password(plain_password, hashed_password):
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception as e:
+        logger.error(f"Password verification failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password verification error"
+        )
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=30))
@@ -45,8 +55,7 @@ def login(username: str = Form(...), password: str = Form(...), db: Session = De
             "sub": user.email,
             "role": user.user_type.type_name,
             "username": user.username,
-            "school_id": user.school_id,
-            "phone_number": user.phone_number
+            "school_id": user.school_id
         },
         expires_delta=expires
     )
