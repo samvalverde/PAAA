@@ -6,6 +6,7 @@ import Procesos from './pages/Admin/Procesos/Procesos';
 import Proyecto from './pages/Admin/Proyecto/Proyecto';
 import Usuarios from './pages/Admin/Usuarios/Usuarios';
 import Usuario from './pages/Admin/Usuario/Usuario';
+import Auditorias from './pages/Admin/Auditorias/Auditorias';
 
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
@@ -64,6 +65,7 @@ function App() {
         <Route path="/proyecto" element={<Proyecto />} />
         <Route path="/usuarios" element={<Usuarios />} />
         <Route path="/usuario" element={<Usuario />} />
+        <Route path="/auditorias" element={<Auditorias/>} />
       </Routes>
   );
 }

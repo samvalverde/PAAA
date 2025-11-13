@@ -222,13 +222,14 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
+      <div>
       <Button
         onClick={() => setVisible(true)}
         icon="pi pi-bars"
         className="sidebar-toggle"
       />
       <SideBar visible={visible} onHide={() => setVisible(false)} />
-
+      </div>
       <div className="dashboard-content">
         <div className="dashboard-header">
           <h2>Dashboard</h2>
