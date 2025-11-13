@@ -177,15 +177,16 @@
 .contacts-table {
   width: 100% !important;
   font-size: 0.8rem;
+  overflow-x: scroll !important;
 }
 
 .contacts-table .p-datatable-wrapper {
-  width: 100%;
+  width: 100% !important;
   max-height: 200px;
 }
 
 .contacts-table table {
-  width: 100% !important;
+  width: 100%;
   table-layout: fixed;
 }
 
