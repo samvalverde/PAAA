@@ -20,6 +20,10 @@ const SideBar = ({ visible, onHide }) => {
                 <i className="pi pi-user" style={{ marginRight: '8px' }}></i>
                 <Link to="/usuarios" onClick={onHide} style={{ textDecoration: 'none', color: '#333' }}>Usuarios</Link>
             </li>
+            <li>
+                <i className="pi pi-file-check" style={{ marginRight: '8px' }}></i>
+                <Link to="/auditorias" onClick={onHide} style={{ textDecoration: 'none', color: '#333' }}>Auditorias</Link>
+            </li>
         </ul>
     </Sidebar>
   );

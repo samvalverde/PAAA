@@ -12,22 +12,6 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import "./Dashboard.css";
 
-const tasks = [
-  { id: 1, task: "Update documentation", completed: true },
-  { id: 2, task: "Fix mobile responsive issues", completed: false },
-  { id: 3, task: "Prepare quarterly report", completed: false },
-  { id: 4, task: "Deploy new features", completed: true },
-  { id: 5, task: "Team meeting", completed: false },
-];
-
-const contacts = [
-  { id: 1, name: "John Doe", email: "john@email.com", status: "Active" },
-  { id: 2, name: "Jane Smith", email: "jane@email.com", status: "Active" },
-  { id: 3, name: "Mike Johnson", email: "mike@email.com", status: "Inactive" },
-  { id: 4, name: "Sarah Wilson", email: "sarah@email.com", status: "Active" },
-  { id: 5, name: "Tom Brown", email: "tom@email.com", status: "Pending" },
-];
-
 const chartData = {
   labels: ["January", "February", "March", "April", "May", "June", "July"],
   datasets: [
@@ -238,13 +222,14 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
+      <div>
       <Button
         onClick={() => setVisible(true)}
         icon="pi pi-bars"
         className="sidebar-toggle"
       />
       <SideBar visible={visible} onHide={() => setVisible(false)} />
-
+      </div>
       <div className="dashboard-content">
         <div className="dashboard-header">
           <h2>Dashboard</h2>
@@ -293,7 +278,6 @@ const Dashboard = () => {
           <Card title="Recent Contacts" className="section-card table-section">
             <DataTable
               value={users}
-              responsiveLayout="scroll"
               className="contacts-table"
             >
               <Column field="username" header="Nombre" sortable></Column>

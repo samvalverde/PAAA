@@ -159,7 +159,6 @@ export const healthAPI = {
   checkMinio: async () => fetchAPI('/health/minio'),
 };
 
-
 // =========================================
 // User API
 // =========================================
@@ -167,5 +166,15 @@ export const healthAPI = {
 export const UserListAPI={
   getUserList: ()=>{
     return(fetchAPI("/users/"))
+  }
+}
+
+export const ProcListAPI={
+  getProcList: ()=>{
+    return(fetchAPI("/proc/"))
+  },
+
+  createProc: ()=>{
+    return(fetchAPI("/proc/create"))
   }
 }

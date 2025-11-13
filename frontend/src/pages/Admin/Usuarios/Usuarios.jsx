@@ -2,7 +2,7 @@ import { Card } from "primereact/card";
 import { Button } from "primereact/button";
 import SideBar from "../../../components/SideBar";
 import './Usuarios.css';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image } from "primereact/image";
 import { Accordion, AccordionTab } from "primereact/accordion";
 import { FloatLabel } from "primereact/floatlabel";
@@ -10,29 +10,37 @@ import { InputText } from "primereact/inputtext";
 import { FileUpload } from "primereact/fileupload";
 import { IconField } from 'primereact/iconfield';
 import { InputIcon } from 'primereact/inputicon';
+import { UserListAPI } from "../../../services/api";
+import { useNavigate } from "react-router-dom";
 
 const Usuarios = () => {
+    const navigate = useNavigate();
     const [sidebarVisible, setSidebarVisible] = useState(false);
     const [filterText, setFilterText] = useState("");
-
-    const users = [
-        { id: 1, name: 'Alice Johnson', email: 'alice.johnson@example.com' },
-        { id: 2, name: 'Bob Smith', email: 'bob.smith@example.com' },
-        { id: 3, name: 'Charlie Brown', email: 'charlie.brown@example.com' },
-        { id: 4, name: 'Diana Prince', email: 'diana.prince@example.com' },
-        { id: 5, name: 'Ethan Hunt', email: 'ethan.hunt@example.com' },
-        { id: 6, name: 'Fiona Gallagher', email: 'fiona.gallagher@example.com' },
-        { id: 7, name: 'George Martin', email: 'george.martin@example.com' }
-    ];
-
+    
+    const [users, setUsers]= useState([]);
     const [newUser, setNewUser] = useState({ name: '', email: '' });
 
     // Filter users based on filterText (case-insensitive)
     const filteredUsers = filterText
         ? users.filter(user =>
-            user.name.toLowerCase().includes(filterText.toLowerCase())
+            user.username.toLowerCase().includes(filterText.toLowerCase()) ||
+            user.email.toLowerCase().includes(filterText.toLowerCase())
         )
         : users;
+
+    useEffect(() => {
+        const fetchUsers = async ()=>{
+          try {
+            const data = await UserListAPI.getUserList();
+            setUsers(data)
+            console.log("datos: ",data)
+          } catch (error) {
+            console.log("Error al encontrar Usuarios")
+          }
+        }
+        fetchUsers()
+      }, []);
 
     return (
         <div className="usuarios-container">
@@ -57,11 +65,11 @@ const Usuarios = () => {
                     </div>
                     <div className="user-grid">
                         {filteredUsers.map(user => (
-                            <Card key={user.id} title={user.name} className="user-card2">
+                            <Card key={user.id} title={user.username} className="user-card2" onClick={()=> navigate("/usuario", { state: user})}>
                                 <div className="user">
                                     <Image
                                         src={`https://i.pravatar.cc/150?img=${user.id}`}
-                                        alt={user.name}
+                                        alt={user.username}
                                         imageStyle={{ width: '100%', height: 'auto', maxWidth: '120px', borderRadius: '30%' }}
                                         className="responsive-user-image"
                                     />
