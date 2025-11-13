@@ -1,3 +1,4 @@
+from asyncio.log import logger
 from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -10,14 +11,19 @@ from app.models.user import User
 
 settings = get_settings()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = None
 
-# --- Password Hashing ---
+def get_pwd_context():
+    global pwd_context
+    if pwd_context is None:
+        pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    return pwd_context
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return get_pwd_context().verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return get_pwd_context().hash(password)
 
 # --- Token creation ---
 def create_access_token(data: dict, expires_minutes: int | None = None) -> str:
