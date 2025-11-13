@@ -21,19 +21,19 @@ CREATE TABLE IF NOT EXISTS schools (
 
 -- ===============================
 -- Tabla: users
--- ===============================
 CREATE TABLE IF NOT EXISTS users (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  user_type_id BIGINT NOT NULL,
   phone_number TEXT,
-  school_id BIGINT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  FOREIGN KEY (user_type_id) REFERENCES user_types(id) ON DELETE RESTRICT,
-  FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE RESTRICT
+  user_type_id BIGINT NOT NULL,
+  school_id BIGINT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_users__user_type FOREIGN KEY (user_type_id) REFERENCES user_types(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_users__school FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE SET NULL
 );
 
 -- ===============================

@@ -5,8 +5,7 @@ from typing import Optional, List, Dict, Any
 from datetime import date
 from app.core.database import get_db_data
 
-router = APIRouter()
-
+router = APIRouter(tags=["Statistics"])
 
 # ========================================
 # GENERAL KPIs
