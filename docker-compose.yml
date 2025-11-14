@@ -62,7 +62,6 @@ services:
       - "5433:5432"
     volumes:
       - db_etl_data:/var/lib/postgresql/data
-      - ./db/02-etl.sql:/docker-entrypoint-initdb.d/02-etl.sql       # Script vacío (temporalmente)
     networks:
       - app_net
     healthcheck:
@@ -86,6 +85,8 @@ services:
       - database_etl
     networks:
       - app_net
+    volumes:
+      - pg_admin_data:/var/lib/pgadmin
 
   # -------------------------------------------------------------------
   # Almacenamiento de archivos (MinIO)
@@ -143,6 +144,7 @@ volumes:
   db_users_data:
   db_etl_data:
   minio_data:
+  pg_admin_data:
 
 networks:
   app_net:

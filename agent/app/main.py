@@ -59,6 +59,7 @@ class NarrativaRequest(BaseModel):
     escuela: str = Field(..., description="Nombre de la escuela")
 
 class NarrativaResponse(BaseModel):
+    
     texto: Optional[str] = None
 
 
