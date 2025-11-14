@@ -1,18 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
+from datetime import datetime
 from app.core.database import get_db_users
 from app.models.user import User
 from app.schemas.user import UserCreate, UserOut
 from app.core.security import get_password_hash, get_current_user
 
 router = APIRouter(tags=["Users"])
-
 @router.post("/create", response_model=UserOut)
 def create_user(user: UserCreate, db: Session = Depends(get_db_users)):
     existing = db.query(User).filter(User.email == user.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    created_at = datetime.utcnow()
     hashed_pw = get_password_hash(user.password)
     new_user = User(
         username=user.username,
@@ -20,11 +21,16 @@ def create_user(user: UserCreate, db: Session = Depends(get_db_users)):
         password_hash=hashed_pw,
         user_type_id=user.user_type_id,
         school_id=user.school_id,
+        is_active=True,
+        phone_number=user.phone_number,
+        created_at=created_at,
+        updated_at=created_at
     )
 
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    return new_user
     return new_user
 
 @router.get("/", response_model=list[UserOut])
