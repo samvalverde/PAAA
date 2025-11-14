@@ -73,7 +73,7 @@ const Usuario = () => {
         />
       </div>
 
-      <div className="Usuario-container">
+      <div>
         <Card className="user-body">
           <h2>{User.username}</h2>
 

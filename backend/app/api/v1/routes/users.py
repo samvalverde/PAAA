@@ -1,11 +1,43 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
-from app.core.database import get_db_users, Base, engine_users
-from app.schemas.user import UserCreate, UserOut
+from datetime import datetime
+from app.core.database import get_db_users
 from app.models.user import User
+from app.schemas.user import UserCreate, UserOut
 from app.core.security import get_password_hash, get_current_user
 
-router = APIRouter()
+router = APIRouter(tags=["Users"])
+@router.post("/create", response_model=UserOut)
+def create_user(user: UserCreate, db: Session = Depends(get_db_users)):
+    existing = db.query(User).filter(User.email == user.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    created_at = datetime.utcnow()
+    hashed_pw = get_password_hash(user.password)
+    new_user = User(
+        username=user.username,
+        email=user.email,
+        password_hash=hashed_pw,
+        user_type_id=user.user_type_id,
+        school_id=user.school_id,
+        is_active=True,
+        phone_number=user.phone_number,
+        created_at=created_at,
+        updated_at=created_at
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
+    return new_user
+
+@router.get("/", response_model=list[UserOut])
+def list_users(db: Session = Depends(get_db_users), current_user=Depends(get_current_user)):
+    users = db.query(User).all()
+    return users
+
 
 @router.get("/me", tags=["Users"])
 def get_me(current_user=Depends(get_current_user)):
@@ -19,7 +51,7 @@ def get_me(current_user=Depends(get_current_user)):
 @router.post("/", response_model=UserOut, status_code=201)
 def create_user(payload: UserCreate, db: Session = Depends(get_db_users)):
     if db.query(User).filter(User.email == payload.email).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Email already registered")
     user = (
         db.query(User)
         .options(joinedload(User.user_type))
@@ -30,18 +62,3 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db_users)):
     db.commit()
     db.refresh(user)
     return user
-
-@router.get("/", response_model=list[UserOut])
-def list_users(db: Session = Depends(get_db_users)):
-    users = db.query(User).options(joinedload(User.user_type)).all()
-    return [
-        {
-            "id": u.id,
-            "email": u.email,
-            "is_active": True,
-            "username": u.username,
-            "phone": u.phone_number,
-            "role": u.user_type.type_name if u.user_type else None
-        }
-        for u in users
-    ]
