@@ -110,7 +110,6 @@ VALUES
    (SELECT id FROM users WHERE username = 'roberto.colab'),
    'En_proceso', NOW(), NOW())
 ON CONFLICT (process_name) DO NOTHING;
-
 -- ====== Tipos de Acción ======
 INSERT INTO action_types (name, description)
 VALUES
@@ -119,6 +118,43 @@ VALUES
   ('eliminar_proceso', 'Eliminación de un proceso'),
   ('asignar_encargado', 'Asignación de un encargado a un proceso')
 ON CONFLICT (name) DO NOTHING;
+
+-- Inserta varios registros referenciando usuarios, tipos de acción y la unidad (school_id)
+-- Asegura que la columna `school_id` exista (para esquemas ya creados previamente)
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS school_id BIGINT;
+
+INSERT INTO audit_log (user_id, action_type_id, school_id, description, created_at)
+VALUES
+  (
+    (SELECT id FROM users WHERE username = 'maria.admin'),
+    (SELECT id FROM action_types WHERE name = 'crear_proceso'),
+    (SELECT school_id FROM users WHERE username = 'maria.admin'),
+    'Creó el proceso Autoevaluación 2025', NOW()
+  ),
+  (
+    (SELECT id FROM users WHERE username = 'juan.colab'),
+    (SELECT id FROM action_types WHERE name = 'asignar_encargado'),
+    (SELECT school_id FROM users WHERE username = 'juan.colab'),
+    'Asignó un encargado al proceso Acreditación 2025', NOW()
+  ),
+  (
+    (SELECT id FROM users WHERE username = 'roberto.colab'),
+    (SELECT id FROM action_types WHERE name = 'modificar_proceso'),
+    (SELECT school_id FROM users WHERE username = 'roberto.colab'),
+    'Modificó el proceso Plan de mejora 2026', NOW()
+  ),
+  (
+    (SELECT id FROM users WHERE username = 'samuel.admin'),
+    (SELECT id FROM action_types WHERE name = 'crear_proceso'),
+    (SELECT school_id FROM users WHERE username = 'samuel.admin'),
+    'Registro de auditoría: creación manual de prueba', NOW()
+  ),
+  (
+    (SELECT id FROM users WHERE username = 'ana.visor'),
+    (SELECT id FROM action_types WHERE name = 'eliminar_proceso'),
+    (SELECT school_id FROM users WHERE username = 'ana.visor'),
+    'Intento de eliminación (registro de prueba)', NOW()
+  );
 
 -- ====== Acciones ======
 INSERT INTO actions (user_id, process_id, action_type_id, timestamp)

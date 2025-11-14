@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.v1.routes import auth, users, health, statistics, process
+from app.api.v1.routes import auth, users, health, statistics, process, audit
 from app.core.config import get_settings
 from fastapi.middleware.cors import CORSMiddleware
  
@@ -62,7 +62,12 @@ app.include_router(
 # (Por implementar)
 
 # ============================ AUDITS ============================
-# (Por implementar)
+
+app.include_router(
+    audit.router,
+    prefix="/api/v1/audit",
+    tags=["Audit"]
+)
 
 # ============================ Root Endpoint ============================
 @app.get("/")

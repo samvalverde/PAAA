@@ -23,3 +23,4 @@ class ActionType(Base):
     description = Column(String)
 
     actions = relationship("Action", back_populates="action_type")
+    audit_logs = relationship("AuditLog", back_populates="action_type")
