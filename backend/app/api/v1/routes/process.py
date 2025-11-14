@@ -2,16 +2,17 @@ from fastapi import APIRouter, Depends, UploadFile, Form, HTTPException
 from fastapi.responses import StreamingResponse
 from io import BytesIO
 from sqlalchemy.orm import Session, joinedload
-from app.core.database import get_db_users
 from app.models.proc import Process
 from app.schemas.proc import ProcessOut
+from app.core.database import get_db_users
+from app.core.config import get_settings
 from app.core.minio_client import upload_file_to_minio, download_file_from_minio
 from app.core.security import get_current_user
 from datetime import datetime, timezone
 
 router = APIRouter(tags=["Processes"])
 
-@router.post("/create")
+@router.post("/create-process")
 def create_process(
     process_name: str = Form(...),
     school_id: int = Form(...),
@@ -24,9 +25,9 @@ def create_process(
     # Validar archivo
     if not file:
         raise HTTPException(status_code=400, detail="Debe adjuntar un archivo .xlsx")
-
+    
     # Crear path en MinIO
-    bucket = "paaa"
+    bucket = get_settings().minio_bucket
     object_name = f"{career_name.upper()}/{dataset_type.upper()}/{file.filename}"
 
     # Subir el archivo a MinIO

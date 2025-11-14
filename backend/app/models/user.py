@@ -24,6 +24,7 @@ class School(Base):
     # Relación inversa con procesos y usuarios
     processes = relationship("Process", back_populates="school")
     users = relationship("User", back_populates="school")
+    audit_logs = relationship("AuditLog", back_populates="school")
 
 
 # =========================
@@ -49,3 +50,4 @@ class User(Base):
     school = relationship("School", back_populates="users")
     processes = relationship("Process", back_populates="encargado")
     actions = relationship("Action", back_populates="user", cascade="all, delete")
+    audit_logs = relationship("AuditLog", back_populates="user")
