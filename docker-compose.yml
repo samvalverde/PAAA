@@ -13,7 +13,7 @@ services:
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio123
-      MINIO_BUCKET: paaa
+      MINIO_BUCKET: paaa-bucket
       MINIO_SECURE: "false"
     depends_on:
       database_etl:
@@ -37,8 +37,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      - ./db/users:/docker-entrypoint-initdb.d
       - db_users_data:/var/lib/postgresql/data
-      - ./db:/docker-entrypoint-initdb.d
     networks:
       - app_net
     healthcheck:
@@ -61,6 +61,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
+      - ./db/etl:/docker-entrypoint-initdb.d
       - db_etl_data:/var/lib/postgresql/data
     networks:
       - app_net

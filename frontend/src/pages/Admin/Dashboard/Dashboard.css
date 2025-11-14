@@ -57,10 +57,12 @@
   margin-bottom: 1.5rem;
   width: 100%;
   box-sizing: border-box;
+  max-height: 250px;
+  overflow-y: scroll;
 }
 
 .kpi-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(57deg, #002855 10%, #2288ff 90%);
   color: white;
   border: none;
   width: 100%;
@@ -175,15 +177,16 @@
 .contacts-table {
   width: 100% !important;
   font-size: 0.8rem;
+  overflow-x: scroll !important;
 }
 
 .contacts-table .p-datatable-wrapper {
-  width: 100%;
+  width: 100% !important;
   max-height: 200px;
 }
 
 .contacts-table table {
-  width: 100% !important;
+  width: 100%;
   table-layout: fixed;
 }
 
