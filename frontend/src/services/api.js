@@ -166,6 +166,10 @@ export const healthAPI = {
 export const UserListAPI={
   getUserList: ()=>{
     return(fetchAPI("/users/"))
+  },
+
+  createUser: (body)=>{
+    return(fetchAPI("/users/create", body))
   }
 }
 

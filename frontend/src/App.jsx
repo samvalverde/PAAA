@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 
 import Dashboard from './pages/Admin/Dashboard/Dashboard';
 import Procesos from './pages/Admin/Procesos/Procesos';
@@ -18,12 +19,23 @@ import 'primereact/resources/primereact.min.css'; //core css
 import 'primeicons/primeicons.css';
 
 import './App.css'
+import { authAPI, UserListAPI } from './services/api';
 
 function Login() {
   const navigate = useNavigate();
+  const [body, setBody] = useState({"username": "", "password":""});
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    const loged = await authAPI.login(body.username, body.password);
+    console.log(loged);
     navigate('/dashboard');
+  };
+
+  const handleChange = (field, value)=>{
+    setBody((prev)=>({
+      ...prev,
+      [field]:value
+    }))
   };
 
   return (
@@ -34,7 +46,11 @@ function Login() {
             <i className='pi pi-user'></i>
           </span>
           <FloatLabel>
-            <InputText id="username" />
+            <InputText 
+            id="username" 
+            value={body.username}
+            onChange={(e)=> handleChange("username", e.target.value)}
+            />
             <label htmlFor="username">Username</label>
           </FloatLabel>
         </div>
@@ -44,7 +60,12 @@ function Login() {
             <i className='pi pi-lock'></i>
           </span>
           <FloatLabel>
-            <InputText id="password" type='password' />
+            <InputText 
+            id="password" 
+            type='password'
+            value={body.password} 
+            onChange={(e)=>handleChange("password", e.target.value)}
+            />
             <label htmlFor="password">Password</label>
           </FloatLabel>
         </div>
