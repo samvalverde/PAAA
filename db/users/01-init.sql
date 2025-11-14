@@ -80,10 +80,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id BIGINT,
   action_type_id BIGINT,
+  school_id BIGINT,
   description TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (action_type_id) REFERENCES action_types(id) ON DELETE SET NULL
+  FOREIGN KEY (action_type_id) REFERENCES action_types(id) ON DELETE SET NULL,
+  FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE SET NULL
 );
 
 -- ===============================
