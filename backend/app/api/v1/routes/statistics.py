@@ -4,6 +4,7 @@ from sqlalchemy import text, func
 from typing import Optional, List, Dict, Any
 from datetime import date
 from app.core.database import get_db_data
+from app.core.security import get_current_user
 
 router = APIRouter(tags=["Statistics"])
 
@@ -15,7 +16,8 @@ router = APIRouter(tags=["Statistics"])
 def get_general_kpis(
     programa: Optional[str] = Query(None, description="Filter by programa (e.g., ATI, TURISMO)"),
     version: Optional[str] = Query(None, description="Filter by version (e.g., v1.0)"),
-    db: Session = Depends(get_db_data)
+    db: Session = Depends(get_db_data),
+    current_user = Depends(get_current_user)
 ):
     """
     Get general KPIs:
@@ -119,7 +121,8 @@ def get_general_kpis(
 def get_responses_per_program(
     dataset: str = Query("egresados", description="Dataset: egresados or profesores"),
     version: Optional[str] = Query(None, description="Filter by version"),
-    db: Session = Depends(get_db_data)
+    db: Session = Depends(get_db_data),
+    current_user = Depends(get_current_user)
 ):
     """
     Get total responses grouped by programa.
@@ -164,7 +167,8 @@ def get_question_analysis(
     question_column: str = Query(..., description="Column name of the question to analyze"),
     programa: Optional[str] = Query(None, description="Filter by programa"),
     version: Optional[str] = Query(None, description="Filter by version"),
-    db: Session = Depends(get_db_data)
+    db: Session = Depends(get_db_data),
+    current_user = Depends(get_current_user)
 ):
     """
     Analyze a specific question column:
@@ -240,7 +244,8 @@ def get_questions_batch_analysis(
     question_columns: List[str] = Query(..., description="List of column names to analyze"),
     programa: Optional[str] = Query(None, description="Filter by programa"),
     version: Optional[str] = Query(None, description="Filter by version"),
-    db: Session = Depends(get_db_data)
+    db: Session = Depends(get_db_data),
+    current_user = Depends(get_current_user)
 ):
     """
     Analyze multiple questions at once.
@@ -318,7 +323,8 @@ def get_questions_batch_analysis(
 @router.get("/available-columns")
 def get_available_columns(
     dataset: str = Query("egresados", description="Dataset: egresados or profesores"),
-    db: Session = Depends(get_db_data)
+    db: Session = Depends(get_db_data),
+    current_user = Depends(get_current_user)
 ):
     """
     Get list of all available columns in the dataset.
@@ -362,7 +368,8 @@ def get_satisfaction_analysis(
     dataset: str = Query("egresados", description="Dataset: egresados or profesores"),
     programa: Optional[str] = Query(None, description="Filter by programa"),
     version: Optional[str] = Query(None, description="Filter by version"),
-    db: Session = Depends(get_db_data)
+    db: Session = Depends(get_db_data),
+    current_user = Depends(get_current_user)
 ):
     """
     Analyze satisfaction question specifically.
@@ -436,7 +443,7 @@ def get_satisfaction_analysis(
 # ========================================
 
 @router.get("/programs")
-def get_available_programs(db: Session = Depends(get_db_data)):
+def get_available_programs(db: Session = Depends(get_db_data), current_user = Depends(get_current_user)):
     """
     Get list of all available programs across both datasets.
     """

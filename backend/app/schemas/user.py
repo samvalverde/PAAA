@@ -12,8 +12,17 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    phone_number: Optional[str] = None
+    user_type_id: Optional[int] = None
+    school_id: Optional[int] = None
+    is_active: Optional[bool] = None
+
 class UserOut(UserBase):
     id: int
-
+    role: Optional[str] = None
+        
     class Config:
         orm_mode = True

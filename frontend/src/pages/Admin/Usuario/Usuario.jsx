@@ -1,39 +1,45 @@
 import { Card } from "primereact/card";
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "primereact/button";
 import SideBar from "../../../components/SideBar";
 import { Tag } from "primereact/tag";
 import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
+import { UserListAPI } from "../../../services/api";
 import "./Usuario.css";
 
 const Usuario = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [User, setUser] = useState(location.state);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const roles = [
     {
-      lable: "Admin", code: 1
+      lable: "admin", code: 1
     },
     {
-        lable: "User", code: 2
+        lable: "colaborador", code: 2
     },
     {
-        lable: "External", code: 3
+        lable: "visor", code: 3
     }
   ];
 
-  const bools = [true, false]
+  const bools = [
+    { label: "Activo", value: true },
+    { label: "Inactivo", value: false }
+  ];
 
   const handleChange = (field, value) => {
     field === "role"
     ? setUser((prev)=>({
         ...prev,
         [field]: value.lable,
-        ["role_id"]: value.code
+        ["user_type_id"]: value.code
     }))
     :
     setUser((prev) => ({
@@ -42,10 +48,38 @@ const Usuario = () => {
     }));
   };
 
-  const handleSave = () => {
-    // TODO: Llamar al API para enviar los datos a la base
-    console.log("User data saved:", User);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      
+      // Prepare the data for the API (only send fields that can be updated)
+      const updateData = {
+        username: User.username,
+        email: User.email,
+        phone_number: User.phone_number,
+        user_type_id: User.user_type_id,
+        school_id: User.school_id,
+        is_active: User.is_active
+      };
+
+      // Call the API to update the user
+      const updatedUser = await UserListAPI.updateUser(User.id, updateData);
+      
+      // Update the local state with the response from the server
+      setUser(updatedUser);
+      setIsEditing(false);
+      
+      console.log("User updated successfully:", updatedUser);
+      
+      // Show success message (you can use a toast library for better UX)
+      alert("Usuario actualizado correctamente");
+      
+    } catch (error) {
+      console.error("Error updating user:", error);
+      alert("Error al actualizar usuario: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -66,6 +100,8 @@ const Usuario = () => {
           icon={isEditing ? "pi pi-save" : "pi pi-pencil"}
           label={isEditing ? "Guardar" : "Editar"}
           className="p-button-rounded p-button-primary edit-btn"
+          loading={loading}
+          disabled={loading}
           onClick={() => {
             if (isEditing) handleSave();
             else setIsEditing(true);
@@ -101,12 +137,12 @@ const Usuario = () => {
               </Tag>
               {isEditing ? (
                 <InputText
-                  value={User.phone}
+                  value={User.phone_number}
                   onChange={(e) => handleChange("phone", e.target.value)}
                   className="editable-input"
                 />
               ) : (
-                <span className="field-value">{User.phone}</span>
+                <span className="field-value">{User.phone_number}</span>
               )}
             </div>
 
@@ -150,10 +186,14 @@ const Usuario = () => {
                 Activo:
               </Tag>
               {isEditing ? (
-                <Dropdown options={bools} value={User.is_active} optionLabel="Role"
-                onChange={(e) => handleChange("is_active", e.target.value)} />
+                <Dropdown 
+                  options={bools} 
+                  value={bools.find(option => option.value === User.is_active)} 
+                  optionLabel="label"
+                  onChange={(e) => handleChange("is_active", e.target.value.value)} 
+                />
               ) : (
-                <span className="field-value">{String(User.is_active)}</span>
+                <span className="field-value">{User.is_active ? "Activo" : "Inactivo"}</span>
               )}
             </div>
           </div>

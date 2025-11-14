@@ -4,7 +4,7 @@ from io import BytesIO
 from sqlalchemy.orm import Session, joinedload
 from app.core.database import get_db_users
 from app.models.proc import Process
-from app.schemas.proc import ProcessOut
+from app.schemas.proc import ProcessOut, ProcessCreate
 from app.core.minio_client import upload_file_to_minio, download_file_from_minio
 from app.core.security import get_current_user
 from datetime import datetime, timezone
@@ -21,13 +21,20 @@ def create_process(
     db: Session = Depends(get_db_users),
     current_user = Depends(get_current_user)
 ):
-    # Validar archivo
+    # Validar archivo CSV o Excel
     if not file:
-        raise HTTPException(status_code=400, detail="Debe adjuntar un archivo .xlsx")
+        raise HTTPException(status_code=400, detail="Debe adjuntar un archivo CSV o Excel")
+    
+    # Validar extensiones permitidas
+    valid_extensions = ['.csv', '.xlsx', '.xls']
+    file_extension = file.filename.lower()[file.filename.rfind('.'):]
+    
+    if file_extension not in valid_extensions:
+        raise HTTPException(status_code=400, detail="El archivo debe ser formato CSV (.csv) o Excel (.xlsx, .xls)")
 
-    # Crear path en MinIO
-    bucket = "paaa"
-    object_name = f"{career_name.upper()}/{dataset_type.upper()}/{file.filename}"
+    # Crear path en MinIO según los requerimientos: school_name/{dataset_type}/filename
+    bucket = "paaa-bucket"
+    object_name = f"{career_name}/{dataset_type}/{file.filename}"
 
     # Subir el archivo a MinIO
     upload_result = upload_file_to_minio(file, bucket, object_name)
@@ -65,7 +72,7 @@ def create_process(
     }
 
 @router.get("/all", response_model=list[ProcessOut])
-def list_proc(db: Session = Depends(get_db_users)):
+def list_proc(db: Session = Depends(get_db_users), current_user = Depends(get_current_user)):
     procesos = db.query(Process).options(joinedload(Process.encargado), joinedload(Process.school)).all()
     return [
         {
@@ -81,14 +88,8 @@ def list_proc(db: Session = Depends(get_db_users)):
         for p in procesos
     ]
 
-@router.get("/test")
-def test():
-    return[
-        {"esto es un test": "si"}
-    ]
-
 @router.get("/{path:path}")
-def get_file_from_minio(path: str):
+def get_file_from_minio(path: str, current_user = Depends(get_current_user)):
     """
     Descarga un archivo desde MinIO a partir de su ruta (por ejemplo: ATI/EGRESADOS/egresados_2025010203.xlsx)
     """

@@ -3,6 +3,34 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
 
 // ========================================
+// Helper function to get auth headers
+// ========================================
+
+function getAuthHeaders() {
+  const token = localStorage.getItem('access_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+// ========================================
+// Authentication utility functions
+// ========================================
+
+export const authUtils = {
+  isAuthenticated: () => {
+    const token = localStorage.getItem('access_token');
+    return !!token;
+  },
+  
+  getToken: () => {
+    return localStorage.getItem('access_token');
+  },
+  
+  clearToken: () => {
+    localStorage.removeItem('access_token');
+  }
+};
+
+// ========================================
 // Generic API Functions
 // ========================================
 
@@ -10,15 +38,32 @@ async function fetchAPI(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   
   try {
+    // Prepare headers
+    let headers = {
+      ...getAuthHeaders(), // Always include auth headers
+      ...options.headers,
+    };
+
+    // Only set Content-Type to JSON if body is not FormData
+    if (options.body && !(options.body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+    }
+
     const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     });
 
     if (!response.ok) {
+      // Handle authentication errors
+      if (response.status === 401) {
+        console.warn('Authentication failed - redirecting to login');
+        localStorage.removeItem('access_token');
+        // Optionally redirect to login page
+        window.location.href = '/';
+        return;
+      }
+      
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
       throw new Error(error.detail || `HTTP error! status: ${response.status}`);
     }
@@ -45,7 +90,7 @@ export const statisticsAPI = {
     if (filters.version) params.append('version', filters.version);
     
     const query = params.toString() ? `?${params.toString()}` : '';
-    return fetchAPI(`/stats/kpis${query}`);
+    return fetchAPI(`/statistics/kpis${query}`);
   },
 
   /**
@@ -57,7 +102,7 @@ export const statisticsAPI = {
     const params = new URLSearchParams({ dataset });
     if (filters.version) params.append('version', filters.version);
     
-    return fetchAPI(`/stats/responses-per-program?${params.toString()}`);
+    return fetchAPI(`/statistics/responses-per-program?${params.toString()}`);
   },
 
   /**
@@ -71,7 +116,7 @@ export const statisticsAPI = {
     if (filters.programa) params.append('programa', filters.programa);
     if (filters.version) params.append('version', filters.version);
     
-    return fetchAPI(`/stats/question-analysis?${params.toString()}`);
+    return fetchAPI(`/statistics/question-analysis?${params.toString()}`);
   },
 
   /**
@@ -86,7 +131,7 @@ export const statisticsAPI = {
     if (filters.programa) params.append('programa', filters.programa);
     if (filters.version) params.append('version', filters.version);
     
-    return fetchAPI(`/stats/questions-batch-analysis?${params.toString()}`, {
+    return fetchAPI(`/statistics/questions-batch-analysis?${params.toString()}`, {
       method: 'POST'
     });
   },
@@ -97,7 +142,7 @@ export const statisticsAPI = {
    */
   getAvailableColumns: async (dataset) => {
     const params = new URLSearchParams({ dataset });
-    return fetchAPI(`/stats/available-columns?${params.toString()}`);
+    return fetchAPI(`/statistics/available-columns?${params.toString()}`);
   },
 
   /**
@@ -110,19 +155,19 @@ export const statisticsAPI = {
     if (filters.programa) params.append('programa', filters.programa);
     if (filters.version) params.append('version', filters.version);
     
-    return fetchAPI(`/stats/satisfaction-analysis?${params.toString()}`);
+    return fetchAPI(`/statistics/satisfaction-analysis?${params.toString()}`);
   },
 
   /**
    * Get list of available programs
    */
   getPrograms: async () => {
-    return fetchAPI('/stats/programs');
+    return fetchAPI('/statistics/programs');
   },
 };
 
 // ========================================
-// Auth API (if needed later)
+// Auth API
 // ========================================
 
 export const authAPI = {
@@ -135,17 +180,27 @@ export const authAPI = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        // Don't include Authorization header for login
       },
       body: formData.toString(),
     });
   },
 
-  getCurrentUser: async (token) => {
-    return fetchAPI('/users/me', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+  getCurrentUser: async () => {
+    // Token will be automatically included by fetchAPI
+    return fetchAPI('/users/me');
+  },
+
+  refreshToken: async () => {
+    // Token will be automatically included by fetchAPI
+    return fetchAPI('/auth/refresh', {
+      method: 'POST',
     });
+  },
+
+  logout: () => {
+    // Clear the token from localStorage
+    localStorage.removeItem('access_token');
   },
 };
 
@@ -163,22 +218,59 @@ export const healthAPI = {
 // User API
 // =========================================
 
-export const UserListAPI={
-  getUserList: ()=>{
-    return(fetchAPI("/users/"))
+export const UserListAPI = {
+  getUserList: () => {
+    // Token will be automatically included by fetchAPI
+    return fetchAPI("/users/");
   },
 
-  createUser: (body)=>{
-    return(fetchAPI("/users/create", body))
-  }
-}
-
-export const ProcListAPI={
-  getProcList: ()=>{
-    return(fetchAPI("/proc/"))
+  createUser: (userData) => {
+    // Token will be automatically included by fetchAPI
+    return fetchAPI("/users/create", {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
   },
 
-  createProc: ()=>{
-    return(fetchAPI("/proc/create"))
+  updateUser: (userId, userData) => {
+    // Token will be automatically included by fetchAPI
+    return fetchAPI(`/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData)
+    });
+  },
+
+  getSchools: () => {
+    // Fetch available schools for dropdown
+    return fetchAPI("/users/schools/");
+  },
+
+  getUsersForDropdown: () => {
+    // Fetch users for dropdown (simplified format)
+    return fetchAPI("/users/users-for-dropdown/");
   }
-}
+};
+
+// =========================================
+// Process API
+// =========================================
+
+export const ProcListAPI = {
+  getProcList: () => {
+    // Token will be automatically included by fetchAPI
+    return fetchAPI("/process/all");
+  },
+
+  createProc: (processData) => {
+    // For file uploads, we need FormData and let fetchAPI handle auth headers
+    return fetchAPI("/process/create", {
+      method: 'POST',
+      body: processData // Should be FormData object
+    });
+  },
+
+  downloadFile: (filePath) => {
+    // Token will be automatically included by fetchAPI
+    return fetchAPI(`/process/${filePath}`);
+  }
+};
