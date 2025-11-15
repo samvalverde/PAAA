@@ -41,15 +41,11 @@
 
 /* Card content — scrolls inside */
 .audit-card {
-  background: white;
-  border-radius: 12px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   padding: 1.5rem;
   flex: 1;
-  width: 100%;
-  overflow-y: auto;           /* 👈 internal scroll for content */
-  overflow-x: hidden;
-  box-sizing: border-box;
+  width: 90vw;
+
 }
 
 /* Form inputs */
