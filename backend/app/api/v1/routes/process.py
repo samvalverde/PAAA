@@ -3,6 +3,8 @@ from fastapi.responses import StreamingResponse
 from io import BytesIO
 from sqlalchemy.orm import Session, joinedload
 from app.models.proc import Process
+from app.models.audit import AuditLog
+from app.models.actions import ActionType
 from app.schemas.proc import ProcessOut, ProcessCreate, ProcessUpdate
 from app.schemas.proc import ProcessOut
 from app.core.database import get_db_users
@@ -12,6 +14,25 @@ from app.core.security import get_current_user
 from datetime import datetime, timezone
 
 router = APIRouter(tags=["Processes"])
+
+
+def _log_audit_action(db: Session, action_name: str, description: str, user_id: int, school_id: int = None):
+    """Helper function to log audit actions"""
+    try:
+        action_type = db.query(ActionType).filter(ActionType.name == action_name).first()
+        if action_type:
+            audit_log = AuditLog(
+                user_id=user_id,
+                action_type_id=action_type.id,
+                school_id=school_id,
+                description=description
+            )
+            db.add(audit_log)
+            db.commit()
+    except Exception as e:
+        # Don't break main flow if audit logging fails
+        print(f"Audit logging failed: {e}")
+
 
 @router.post("/create")
 def create_process(
@@ -57,6 +78,15 @@ def create_process(
     db.commit()
     db.refresh(new_process)
 
+    # Log audit action
+    _log_audit_action(
+        db=db, 
+        action_name="Create", 
+        description=f"Process created: {process_name}",
+        user_id=current_user.id,
+        school_id=school_id
+    )
+
     # Respuesta
     return {
         "status": "ok",
@@ -71,6 +101,60 @@ def create_process(
             "updated_at": new_process.updated_at
         },
         "minio_path": f"{bucket}/{object_name}"
+    }
+
+@router.post("/upload-file")
+def upload_file_only(
+    school_name: str = Form(...),           # ej: "ATI"  
+    dataset_type: str = Form(...),          # ej: "egresados"
+    file: UploadFile = Form(...),
+    db: Session = Depends(get_db_users),
+    current_user = Depends(get_current_user)
+):
+    """
+    Upload a file to MinIO without creating a new process.
+    This endpoint is for adding files to existing project contexts.
+    """
+    # Validar archivo CSV o Excel
+    if not file:
+        raise HTTPException(status_code=400, detail="Debe adjuntar un archivo CSV o Excel")
+    
+    # Validar extensiones permitidas
+    valid_extensions = ['.csv', '.xlsx', '.xls']
+    file_extension = file.filename.lower()[file.filename.rfind('.'):]
+    
+    if file_extension not in valid_extensions:
+        raise HTTPException(status_code=400, detail="El archivo debe ser formato CSV (.csv) o Excel (.xlsx, .xls)")
+
+    # Crear path en MinIO: school_name/{dataset_type}/filename
+    bucket = "paaa-bucket"
+    object_name = f"{school_name}/{dataset_type}/{file.filename}"
+
+    # Subir el archivo a MinIO
+    upload_result = upload_file_to_minio(file, bucket, object_name)
+    if upload_result["status"] != "ok":
+        raise HTTPException(status_code=500, detail=f"Error al subir a MinIO: {upload_result['message']}")
+
+    # Log audit action for file upload
+    _log_audit_action(
+        db=db,
+        action_name="Create",
+        description=f"File uploaded: {file.filename} to {school_name}/{dataset_type}",
+        user_id=current_user.id
+    )
+
+    # Respuesta (sin crear proceso)
+    return {
+        "status": "ok",
+        "message": "Archivo subido correctamente al bucket.",
+        "minio_path": f"{bucket}/{object_name}",
+        "file_info": {
+            "filename": file.filename,
+            "school_name": school_name,
+            "dataset_type": dataset_type,
+            "bucket": bucket,
+            "object_name": object_name
+        }
     }
 
 @router.get("/all", response_model=list[ProcessOut])
@@ -142,6 +226,15 @@ def update_process(
     # Commit the changes
     db.commit()
     db.refresh(process)
+    
+    # Log audit action
+    _log_audit_action(
+        db=db,
+        action_name="Update",
+        description=f"Process updated: {process.process_name}",
+        user_id=current_user.id,
+        school_id=process.school_id
+    )
     
     # Return the updated process with relationships
     updated_process = db.query(Process).options(

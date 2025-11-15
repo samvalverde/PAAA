@@ -12,7 +12,8 @@ import { Column } from 'primereact/column';
 import { FloatLabel } from 'primereact/floatlabel';
 import { Accordion, AccordionTab } from "primereact/accordion";
 import SideBar from '../../../components/SideBar';
-import { ProcListAPI, UserListAPI } from '../../../services/api';
+import { ProcListAPI, UserListAPI, AgentAPI } from '../../../services/api';
+import auditLogger from '../../../utils/audit';
 import "./Proyecto.css";
 
 const Proyecto = () => {
@@ -48,6 +49,32 @@ const Proyecto = () => {
   const datasetOptions = [
     { label: "Egresados", value: "egresados" },
     { label: "Profesores", value: "profesores" },
+  ];
+
+  // Analytics state
+  const [analyticsForm, setAnalyticsForm] = useState({
+    dataset: "egresados",
+    tipo_analitica: "resumen_general",
+    distribuciones: [],
+    filtros: {}
+  });
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsResults, setAnalyticsResults] = useState(null);
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
+  const [narrative, setNarrative] = useState(null);
+
+  // Analytics options
+  const analyticTypeOptions = [
+    { label: "Resumen General", value: "resumen_general" },
+    { label: "Perfil de Población", value: "perfil_poblacion" },
+    { label: "Detalle de Pregunta", value: "detalle_pregunta" },
+  ];
+
+  const distributionOptions = [
+    { label: "Sexo", value: "sexo" },
+    { label: "Año de Graduación", value: "anio_graduacion" },
+    { label: "Edad", value: "edad" },
+    { label: "Estado Civil", value: "estado_civil" },
   ];
 
   // Estado options
@@ -98,6 +125,10 @@ const Proyecto = () => {
       setError(null);
       const data = await ProcListAPI.getProcById(processId);
       setProjectData(data);
+      
+      // Log audit action for viewing project
+      await auditLogger.projectView(data.process_name, data.school_id);
+      
     } catch (err) {
       console.error('Error fetching project data:', err);
       setError('Error al cargar los datos del proyecto');
@@ -192,6 +223,9 @@ const Proyecto = () => {
       
       console.log("Project updated successfully:", updatedProject);
       
+      // Log audit action for project update
+      await auditLogger.projectUpdate(updatedProject.process_name, updatedProject.school_id);
+      
       // Show success message (you can use a toast library for better UX)
       alert("Proyecto actualizado correctamente");
       
@@ -224,6 +258,9 @@ const Proyecto = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+      
+      // Log audit action for file download
+      await auditLogger.fileDownload(fileData.name, projectData?.process_name, projectData?.school_id);
       
     } catch (error) {
       console.error('Error downloading file:', error);
@@ -291,11 +328,9 @@ const Proyecto = () => {
         return;
       }
 
-      // Create FormData for file upload
+      // Create FormData for file upload (simplified for file-only upload)
       const formData = new FormData();
-      formData.append("process_name", `Upload_${schoolName}_${uploadForm.dataset_type}_${uploadForm.version}`);
-      formData.append("school_id", projectData.school_id.toString());
-      formData.append("career_name", schoolName); // Use school name for MinIO path
+      formData.append("school_name", schoolName); // Use school name for MinIO path
       formData.append("dataset_type", uploadForm.dataset_type);
       formData.append("file", uploadForm.file);
 
@@ -309,8 +344,8 @@ const Proyecto = () => {
         return;
       }
 
-      // Call the API to upload the file
-      await ProcListAPI.createProc(formData);
+      // Call the new API to upload the file only (without creating a process)
+      await ProcListAPI.uploadFile(formData);
 
       // Reset the form
       setUploadForm({
@@ -326,6 +361,9 @@ const Proyecto = () => {
 
       alert("Archivo subido correctamente");
       
+      // Log audit action for file upload
+      await auditLogger.fileUpload(uploadForm.file.name, projectData?.process_name, projectData?.school_id);
+      
       // Reload files to show the new upload
       if (projectData?.id) {
         loadFiles(projectData.id);
@@ -336,6 +374,83 @@ const Proyecto = () => {
       alert("Error al subir archivo: " + error.message);
     } finally {
       setUploadLoading(false);
+    }
+  };
+
+  // Analytics functions
+  const handleRunAnalytics = async () => {
+    try {
+      setAnalyticsLoading(true);
+      setAnalyticsResults(null);
+      setNarrative(null);
+
+      // Get school name (programa) from project data
+      const programa = projectData?.unidad;
+      if (!programa) {
+        alert("No se puede determinar la escuela del proyecto");
+        return;
+      }
+
+      // Prepare payload for analytics
+      const payload = {
+        poblacion: {
+          dataset: analyticsForm.dataset,
+          programa: programa,
+          filtros: analyticsForm.filtros,
+        },
+        distribuciones: analyticsForm.distribuciones,
+        tipo_analitica: analyticsForm.tipo_analitica
+      };
+
+      console.log("Running analytics with payload:", payload);
+
+      // Call analytics API
+      const results = await AgentAPI.getAnalytics(payload);
+      setAnalyticsResults(results);
+
+      console.log("Analytics results:", results);
+
+      // Log audit action
+      await auditLogger.analyticsRun(analyticsForm.tipo_analitica, analyticsForm.dataset, projectData?.school_id);
+
+    } catch (error) {
+      console.error("Error running analytics:", error);
+      alert("Error al ejecutar análisis: " + error.message);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  const handleGenerateNarrative = async () => {
+    if (!analyticsResults) {
+      alert("Primero ejecute un análisis para generar la narrativa");
+      return;
+    }
+
+    try {
+      setNarrativeLoading(true);
+      setNarrative(null);
+
+      const programa = projectData?.unidad;
+      const payload = {
+        enunciado: `Generar un reporte analítico para ${programa}`,
+        resultados: analyticsResults.resultados,
+        poblacion: analyticsResults.poblacion,
+        escuela: programa
+      };
+
+      console.log("Generating narrative with payload:", payload);
+
+      const narrativeResult = await AgentAPI.generateNarrative(payload);
+      setNarrative(narrativeResult.texto);
+
+      console.log("Narrative result:", narrativeResult);
+
+    } catch (error) {
+      console.error("Error generating narrative:", error);
+      alert("Error al generar narrativa: " + error.message);
+    } finally {
+      setNarrativeLoading(false);
     }
   };
 
@@ -744,6 +859,214 @@ const Proyecto = () => {
     );
   };
 
+  const analyticsContent = () => {
+    const renderAnalyticsResults = () => {
+      if (!analyticsResults) return null;
+
+      const { poblacion, resultados } = analyticsResults;
+
+      return (
+        <Card style={{ marginTop: '1rem' }}>
+          <h4>Resultados del Análisis</h4>
+          <div className="analytics-results">
+            <div className="population-info">
+              <h5>Información de la Población</h5>
+              <p><strong>Dataset:</strong> {poblacion.dataset}</p>
+              <p><strong>Programa:</strong> {poblacion.programa}</p>
+              {poblacion.n && <p><strong>Tamaño de muestra:</strong> {poblacion.n}</p>}
+            </div>
+
+            {resultados.kpis && (
+              <div className="kpis-section">
+                <h5>KPIs</h5>
+                <div className="kpis-grid">
+                  {Object.entries(resultados.kpis).map(([key, value]) => (
+                    <div key={key} className="kpi-card">
+                      <div className="kpi-label">{key.replace(/_/g, ' ').toUpperCase()}</div>
+                      <div className="kpi-value">{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {resultados.distribuciones && (
+              <div className="distributions-section">
+                <h5>Distribuciones</h5>
+                {Object.entries(resultados.distribuciones).map(([key, distribution]) => (
+                  <div key={key} className="distribution-card">
+                    <h6>{key.replace(/_/g, ' ').toUpperCase()}</h6>
+                    <DataTable 
+                      value={Object.entries(distribution).map(([k, v]) => ({ categoria: k, valor: v }))}
+                      size="small"
+                    >
+                      <Column field="categoria" header="Categoría" />
+                      <Column field="valor" header="Valor" />
+                    </DataTable>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {resultados.tablas && (
+              <div className="tables-section">
+                <h5>Tablas</h5>
+                {Object.entries(resultados.tablas).map(([key, table]) => (
+                  <div key={key} className="table-card">
+                    <h6>{key.replace(/_/g, ' ').toUpperCase()}</h6>
+                    <DataTable 
+                      value={table}
+                      size="small"
+                      scrollable
+                      scrollHeight="300px"
+                    >
+                      {table.length > 0 && Object.keys(table[0]).map(col => (
+                        <Column key={col} field={col} header={col.replace(/_/g, ' ').toUpperCase()} />
+                      ))}
+                    </DataTable>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      );
+    };
+
+    const renderNarrative = () => {
+      if (!narrative) return null;
+
+      return (
+        <Card style={{ marginTop: '1rem' }}>
+          <h4>Narrativa Generada</h4>
+          <div className="narrative-content">
+            {narrative ? (
+              <div style={{ 
+                padding: '1rem', 
+                backgroundColor: '#f8f9fa', 
+                borderRadius: '8px',
+                lineHeight: '1.6'
+              }}>
+                {narrative}
+              </div>
+            ) : (
+              <p>No hay narrativa disponible. La funcionalidad de narrativa requiere configuración adicional.</p>
+            )}
+          </div>
+        </Card>
+      );
+    };
+
+    return (
+      <div className="analytics-content">
+        <Accordion multiple activeIndex={[0]} className="analytics-accordion">
+          {/* Analytics Configuration */}
+          <AccordionTab header="Configurar Análisis" className="analytics-tab">
+            <Card className="analytics-config-card">
+              <h4>Configuración del Análisis</h4>
+              <p>Configure los parámetros para analizar los datos de {projectData?.unidad || 'esta escuela'}</p>
+              
+              <div className="analytics-form">
+                <div className="form-group">
+                  <label htmlFor="analytics-dataset" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
+                    Dataset *
+                  </label>
+                  <Dropdown
+                    id="analytics-dataset"
+                    value={analyticsForm.dataset}
+                    onChange={(e) =>
+                      setAnalyticsForm({ ...analyticsForm, dataset: e.value })
+                    }
+                    options={datasetOptions}
+                    placeholder="Seleccionar dataset"
+                    className="input-field"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginTop: "20px" }}>
+                  <label htmlFor="analytic-type" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
+                    Tipo de Análisis *
+                  </label>
+                  <Dropdown
+                    id="analytic-type"
+                    value={analyticsForm.tipo_analitica}
+                    onChange={(e) =>
+                      setAnalyticsForm({ ...analyticsForm, tipo_analitica: e.value })
+                    }
+                    options={analyticTypeOptions}
+                    placeholder="Seleccionar tipo"
+                    className="input-field"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginTop: "20px" }}>
+                  <label htmlFor="distributions" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
+                    Distribuciones (Opcional)
+                  </label>
+                  <Dropdown
+                    id="distributions"
+                    value={analyticsForm.distribuciones}
+                    onChange={(e) =>
+                      setAnalyticsForm({ ...analyticsForm, distribuciones: e.value })
+                    }
+                    options={distributionOptions}
+                    placeholder="Seleccionar distribuciones"
+                    className="input-field"
+                    style={{ width: "100%" }}
+                    multiple
+                  />
+                </div>
+
+                <div style={{ marginTop: "30px", textAlign: "center" }}>
+                  <Button
+                    label="Ejecutar Análisis"
+                    icon="pi pi-play"
+                    onClick={handleRunAnalytics}
+                    loading={analyticsLoading}
+                    className="p-button-success"
+                    style={{ marginRight: "10px" }}
+                  />
+                  <Button
+                    label="Generar Narrativa"
+                    icon="pi pi-file-edit"
+                    onClick={handleGenerateNarrative}
+                    loading={narrativeLoading}
+                    disabled={!analyticsResults}
+                    className="p-button-info"
+                  />
+                </div>
+              </div>
+            </Card>
+          </AccordionTab>
+
+          {/* Analytics Results */}
+          <AccordionTab header="Resultados" className="analytics-tab">
+            {analyticsLoading ? (
+              <div className="loading-container">
+                <ProgressSpinner />
+                <p>Ejecutando análisis...</p>
+              </div>
+            ) : (
+              <div>
+                {!analyticsResults ? (
+                  <div className="no-results-message">
+                    <p>No hay resultados disponibles.</p>
+                    <p>Configure y ejecute un análisis en la pestaña anterior para ver los resultados aquí.</p>
+                  </div>
+                ) : (
+                  renderAnalyticsResults()
+                )}
+                {renderNarrative()}
+              </div>
+            )}
+          </AccordionTab>
+        </Accordion>
+      </div>
+    );
+  };
+
   return (
     <div className="proyecto-container">
       <Button
@@ -782,6 +1105,9 @@ const Proyecto = () => {
           </TabPanel>
           <TabPanel header="Datos" className="proyecto-card">
             {datosContent()}
+          </TabPanel>
+          <TabPanel header="Analytics" className="proyecto-card">
+            {analyticsContent()}
           </TabPanel>
         </TabView>
       </div>

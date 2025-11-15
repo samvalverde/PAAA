@@ -5,6 +5,8 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from app.core.database import get_db_users
 from app.models.user import User
+from app.models.audit import AuditLog
+from app.models.actions import ActionType
 from app.core.config import get_settings
 from app.core.security import get_current_user, verify_password
 import logging
@@ -13,6 +15,25 @@ router = APIRouter(tags=["Auth"])
 settings = get_settings()
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 logger = logging.getLogger(__name__)
+
+
+def _log_audit_action(db: Session, action_name: str, description: str, user_id: int, school_id: int = None):
+    """Helper function to log audit actions"""
+    try:
+        action_type = db.query(ActionType).filter(ActionType.name == action_name).first()
+        if action_type:
+            audit_log = AuditLog(
+                user_id=user_id,
+                action_type_id=action_type.id,
+                school_id=school_id,
+                description=description
+            )
+            db.add(audit_log)
+            db.commit()
+    except Exception as e:
+        # Don't break main flow if audit logging fails
+        print(f"Audit logging failed: {e}")
+
 
 # --- Password helpers ---
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
@@ -53,6 +74,16 @@ def login(username: str = Form(...), password: str = Form(...), db: Session = De
 
     
     print(f"Auth successful for: {user.email} | role={user.user_type.type_name}")
+    
+    # Log audit action for successful login
+    _log_audit_action(
+        db=db,
+        action_name="Read",
+        description=f"User logged in: {user.username}",
+        user_id=user.id,
+        school_id=user.school_id
+    )
+    
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/register", tags=["Auth"])
@@ -65,6 +96,16 @@ def register(email: str = Form(...), username: str = Form(...), password: str = 
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    # Log audit action for user registration
+    _log_audit_action(
+        db=db,
+        action_name="Create",
+        description=f"User registered: {username} ({email})",
+        user_id=new_user.id,
+        school_id=new_user.school_id
+    )
+    
     return {"message": f"User {username} created successfully"}
 
 @router.post("/refresh", tags=["Auth"])

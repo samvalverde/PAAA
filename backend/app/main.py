@@ -53,7 +53,7 @@ app.include_router(
 # ============================ STATISTICS ============================
 app.include_router(
     statistics.router,
-    prefix="/api/v1/stats",
+    prefix="/api/v1/statistics",
     tags=["Statistics"]
 )
 

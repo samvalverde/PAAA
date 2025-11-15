@@ -1,10 +1,14 @@
 from typing import Any, Dict, List
 import os
+import logging
 
 import pandas as pd
 from sqlalchemy import text
 
 from etl.db import make_engine
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 def _load_core_dataset(dataset_name: str, core_schema: str | None = None) -> pd.DataFrame:
@@ -123,7 +127,10 @@ def generate_general_summary(poblacion: Dict[str, Any],
 
     # 1) Cargar datos desde core.<dataset_name> y aplicar filtros
     df = _load_core_dataset(dataset_name)
+    logger.info(f"Loaded dataset {dataset_name} with {len(df)} rows and columns: {list(df.columns)}")
+    
     df = _apply_filters(df, poblacion)
+    logger.info(f"After filtering: {len(df)} rows remaining")
 
     # Actualizamos n en la población si no viene; esto se devuelve al cliente
     n = len(df)
@@ -138,15 +145,19 @@ def generate_general_summary(poblacion: Dict[str, Any],
     # Pregunta de satisfacción "estrella" si existe; en tu survey ATI es ep07_18
     sat_col = "ep07_18"
     if sat_col in df.columns:
+        logger.info(f"Found satisfaction column {sat_col}")
         sat_vals = pd.to_numeric(df[sat_col], errors="coerce")
         if sat_vals.notna().any():
             kpis["satisfaccion_media_ep07_18"] = float(sat_vals.mean(skipna=True))
             kpis["nps"] = float(_compute_nps(sat_vals))
+    else:
+        logger.info(f"Satisfaction column {sat_col} not found in columns: {list(df.columns)}")
 
     # 3) Tablas de composición (por ahora, posgrados si existe)
     tablas: Dict[str, Any] = {}
 
     if "posgrado" in df.columns:
+        logger.info("Found posgrado column")
         vc = df["posgrado"].value_counts(dropna=False)
         total_posgrados = vc.sum()
         filas_posgrados = []
@@ -160,17 +171,22 @@ def generate_general_summary(poblacion: Dict[str, Any],
                 "porcentaje": round(porcentaje, 1),
             })
         tablas["posgrados"] = filas_posgrados
+    else:
+        logger.info("Posgrado column not found")
 
     ## Aca se puede expandir mas tablas si se quiere
 
     # 4) Distribuciones solicitadas
     distribuciones_resultado: Dict[str, Any] = {}
+    logger.info(f"Processing distributions for: {distribuciones}")
     for variable in distribuciones:
         if variable not in df.columns:
             # Si el cliente pide una distribución de una columna que no existe,
             # simplemente la ignoramos.
+            logger.warning(f"Distribution column '{variable}' not found in dataset columns: {list(df.columns)}")
             continue
 
+        logger.info(f"Processing distribution for {variable}")
         vc = df[variable].value_counts(dropna=False).sort_index()
         dist = {}
         for valor, conteo in vc.items():
@@ -178,6 +194,7 @@ def generate_general_summary(poblacion: Dict[str, Any],
             dist[clave] = int(conteo)
         distribuciones_resultado[variable] = dist
 
+    logger.info(f"Final result: kpis={kpis}, distribuciones={distribuciones_resultado}")
     return {
         "kpis": kpis,
         "tablas": tablas,
