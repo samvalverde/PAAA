@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.core.database import get_db_users
 from app.models.audit import AuditLog
 from app.schemas.audit import AuditOut
+from app.core.security import get_current_user
 
 router = APIRouter()
 
@@ -22,7 +23,10 @@ def _serialize_audit(a: AuditLog) -> dict:
 
 
 @router.get("/all", response_model=list[AuditOut])
-def get_all_audits(db: Session = Depends(get_db_users)):
+def get_all_audits(
+    db: Session = Depends(get_db_users),
+    current_user = Depends(get_current_user)
+):
     """Devuelve todos los registros de la tabla `audit_log`."""
     audits = (
         db.query(AuditLog)
@@ -34,7 +38,11 @@ def get_all_audits(db: Session = Depends(get_db_users)):
 
 
 @router.get("/{user_id}", response_model=list[AuditOut])
-def get_audits_by_user(user_id: int, db: Session = Depends(get_db_users)):
+def get_audits_by_user(
+    user_id: int, 
+    db: Session = Depends(get_db_users),
+    current_user = Depends(get_current_user)
+):
     """Devuelve todos los registros de auditoría para un usuario específico."""
     audits = (
         db.query(AuditLog)

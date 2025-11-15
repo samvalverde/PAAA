@@ -1,6 +1,7 @@
 // API Configuration and Services
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
+const AGENT_API = 'http://localhost:8000';
 
 // ========================================
 // Helper function to get auth headers
@@ -34,8 +35,14 @@ export const authUtils = {
 // Generic API Functions
 // ========================================
 
-async function fetchAPI(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
+async function fetchAPI(endpoint, options = {}, flag = true) {
+  let url = "";
+  if (flag){
+    url =`${API_BASE_URL}${endpoint}`;
+  } else {
+    url = `${API_BASE_URL}${endpoint}`;
+  }
+
   
   try {
     // Prepare headers
@@ -261,6 +268,24 @@ export const ProcListAPI = {
     return fetchAPI("/process/all");
   },
 
+  getProcById: (processId) => {
+    // Get a specific process by ID
+    return fetchAPI(`/process/id/${processId}`);
+  },
+
+  updateProc: (processId, updateData) => {
+    // Update a specific process by ID
+    return fetchAPI(`/process/id/${processId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData)
+    });
+  },
+
+  getProcFiles: (processId) => {
+    // Get files for a specific process from MinIO
+    return fetchAPI(`/process/id/${processId}/files`);
+  },
+
   createProc: (processData) => {
     // For file uploads, we need FormData and let fetchAPI handle auth headers
     return fetchAPI("/process/create", {
@@ -269,8 +294,44 @@ export const ProcListAPI = {
     });
   },
 
-  downloadFile: (filePath) => {
+  downloadFile: async (filePath) => {
+    // For file downloads, we need to handle binary data, not JSON
+    const token = localStorage.getItem('access_token');
+    const response = await fetch(`${API_BASE_URL}/process/${filePath}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return response; // Return the response object directly for blob handling
+  }
+};
+
+export const AgentAPI = {
+  loadEgresados: (type, data)=>{
+    return fetchAPI(`/carga/${type}/minio`, {
+      method: 'POST',
+      body: data
+    }, false);
+  }
+}
+
+// =========================================
+// Audit API
+// =========================================
+
+export const AuditAPI = {
+  getAllAudits: () => {
     // Token will be automatically included by fetchAPI
-    return fetchAPI(`/process/${filePath}`);
+    return fetchAPI("/audit/all");
+  },
+
+  getAuditsByUser: (userId) => {
+    // Token will be automatically included by fetchAPI
+    return fetchAPI(`/audit/${userId}`);
   }
 };

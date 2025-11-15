@@ -28,7 +28,7 @@ export default function AdvancedFilter() {
     { name: "Pedro Martínez", image: "bernardodominic.png" },
     { name: "Laura Fernández", image: "elwinsharvill.png" },
   ]);
-  const [estados] = useState(["Pending", "In Progress", "Active", "Completed"]);
+  const [estados] = useState(["Failed", "In Progress", "Active", "Completed"]);
   const [unidades] = useState([
     "Forestal",
     "Computación",
@@ -41,13 +41,13 @@ export default function AdvancedFilter() {
 
   const getSeverity = (estado) => {
     switch (estado) {
-      case "In Progress":
+      case "En proceso":
         return "warning";
-      case "Active":
+      case "Activo":
         return "info";
-      case "Completed":
+      case "Completado":
         return "success";
-      case "cancelado":
+      case "Fallido":
         return "danger";
       default:
         return null;
@@ -198,22 +198,6 @@ export default function AdvancedFilter() {
     );
   };
 
-  const periodoBodyTemplate = (rowData) => {
-    return formatDate(rowData.periodo);
-  };
-
-  const periodoFilterTemplate = (options) => {
-    return (
-      <Calendar
-        value={options.value}
-        onChange={(e) => options.filterCallback(e.value, options.index)}
-        dateFormat="mm/yy"
-        placeholder="mm/aaaa"
-        view="month"
-      />
-    );
-  };
-
   const estadoBodyTemplate = (rowData) => {
     return (
       <Tag value={rowData.estado} severity={getSeverity(rowData.estado)} />
@@ -289,12 +273,12 @@ export default function AdvancedFilter() {
   }, []);
 
   return (
-    <div className="card">
+    <div>
       <DataTable
         value={customers}
         paginator
         showGridlines
-        rows={10}
+        rows={5}
         loading={loading}
         dataKey="id"
         filters={filters}

@@ -47,3 +47,44 @@ def download_file_from_minio(bucket_name: str, object_name: str):
     except ClientError as e:
         print(f"Error al descargar archivo de MinIO: {e}")
         return None
+
+def list_files_in_minio(bucket_name: str, prefix: str = ""):
+    """Lista archivos en MinIO usando boto3"""
+    s3_client = get_minio_client()
+
+    try:
+        # FLAG
+        print("Listando archivos en:", bucket_name, "con prefijo:", prefix)
+
+        response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+        
+        if 'Contents' not in response:
+            return []
+
+        files = []
+        for obj in response['Contents']:
+            # Get object metadata for additional info
+            try:
+                meta_response = s3_client.head_object(Bucket=bucket_name, Key=obj['Key'])
+                files.append({
+                    'key': obj['Key'],
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'].isoformat(),
+                    'etag': obj['ETag'].strip('"'),
+                    'content_type': meta_response.get('ContentType', 'unknown')
+                })
+            except ClientError as meta_e:
+                # If we can't get metadata, add basic info
+                files.append({
+                    'key': obj['Key'],
+                    'size': obj['Size'],
+                    'last_modified': obj['LastModified'].isoformat(),
+                    'etag': obj['ETag'].strip('"'),
+                    'content_type': 'unknown'
+                })
+
+        return files
+
+    except ClientError as e:
+        print(f"Error al listar archivos en MinIO: {e}")
+        return []

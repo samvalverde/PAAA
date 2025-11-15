@@ -282,7 +282,7 @@ const Dashboard = () => {
             >
               <Column field="username" header="Nombre" sortable></Column>
               <Column field="role" header="Rol" sortable></Column>
-              <Column field="phone" header= "Phone Number"></Column>
+              <Column field="phone_number" header= "Phone Number"></Column>
               <Column field="email" header="Email" sortable></Column>
               <Column field="is_active" header="Status" sortable></Column>
             </DataTable>
