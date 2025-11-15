@@ -1,5 +1,7 @@
 secrets/
 
+DATOS
+
 # --- Python ---
 __pycache__/
 *__pycache__*/
@@ -26,4 +28,5 @@ backend/.env
 Thumbs.db
 
 db/mock-data.sql
+
 
