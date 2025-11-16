@@ -31,7 +31,6 @@ const Proyecto = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [users, setUsers] = useState([]);
-  const [schools, setSchools] = useState([]);
   const [dropdownsLoading, setDropdownsLoading] = useState(false);
   const [files, setFiles] = useState([]);
   const [filesLoading, setFilesLoading] = useState(false);
@@ -145,7 +144,7 @@ const Proyecto = () => {
 
   // Load dropdown data when editing starts
   useEffect(() => {
-    if (isEditing && (users.length === 0 || schools.length === 0)) {
+    if (isEditing && users.length === 0) {
       loadDropdownData();
     }
   }, [isEditing]);
@@ -188,24 +187,11 @@ const Proyecto = () => {
     }
   };
 
-  const formatSchools = (data)=>{
-    console.log("School: ", data);
-    const schoolOptions = data.map((school) => ({
-          label: school.name,
-          value: school.id,
-        }));
-    setSchools(schoolOptions);
-  }
-
   const loadDropdownData = async () => {
     try {
       setDropdownsLoading(true);
-      const [usersData, schoolsData] = await Promise.all([
-        UserListAPI.getUsersForDropdown(),
-        UserListAPI.getSchools()
-      ]);
+      const usersData = await UserListAPI.getUsersForDropdown();
       setUsers(usersData);
-      formatSchools(schoolsData);
     } catch (err) {
       console.error('Error loading dropdown data:', err);
     } finally {
@@ -704,22 +690,7 @@ const Proyecto = () => {
             
             <div className="info-item">
               <label>Unidad/Escuela:</label>
-              {isEditing ? (
-                <Dropdown
-                  value={schools.find(s => s.value === projectData.school_id)}
-                  options={schools}
-                  onChange={(e) => {
-                    const selectedSchool = e.value;
-                    handleChange('school_id', selectedSchool);
-                  }}
-                  optionLabel="label"
-                  placeholder="Selecciona una escuela"
-                  className="editable-dropdown"
-                  loading={dropdownsLoading}
-                />
-              ) : (
-                <span className="info-value">{projectData.unidad || 'No especificada'}</span>
-              )}
+              <span className="info-value">{projectData.unidad || 'No especificada'}</span>
             </div>
             
             <div className="info-item">

@@ -16,56 +16,6 @@ import { Column } from "primereact/column";
 import auditLogger from "../../../utils/audit";
 import "./Dashboard.css";
 
-const chartData = {
-  labels: ["January", "February", "March", "April", "May", "June", "July"],
-  datasets: [
-    {
-      label: "Revenue",
-      data: [65, 59, 80, 81, 56, 55, 40],
-      fill: false,
-      borderColor: "#42A5F5",
-      tension: 0.4,
-    },
-    {
-      label: "Users",
-      data: [28, 48, 40, 19, 86, 27, 90],
-      fill: false,
-      borderColor: "#FFA726",
-      tension: 0.4,
-    },
-  ],
-};
-
-const chartOptions = {
-  maintainAspectRatio: false,
-  aspectRatio: 0.6,
-  plugins: {
-    legend: {
-      labels: {
-        color: "#495057",
-      },
-    },
-  },
-  scales: {
-    x: {
-      ticks: {
-        color: "#495057",
-      },
-      grid: {
-        color: "#ebedef",
-      },
-    },
-    y: {
-      ticks: {
-        color: "#495057",
-      },
-      grid: {
-        color: "#ebedef",
-      },
-    },
-  },
-};
-
 const Dashboard = () => {
   const [visible, setVisible] = useState(true);
 
@@ -257,37 +207,65 @@ const Dashboard = () => {
     }
   };
 
-  // Chart for responses per program
-  const programChartData = responsesPerProgram
+  // Chart for satisfaction analysis (line chart)
+  const satisfactionChartData = satisfactionData
     ? {
-        labels: responsesPerProgram.data.map((item) => item.programa),
+        labels: satisfactionData.distribution.map((item) => item.satisfaction_level || "No response"),
         datasets: [
           {
-            label: "Responses",
-            data: responsesPerProgram.data.map((item) => item.count),
-            backgroundColor: "#42A5F5",
+            label: "Satisfaction Distribution",
+            data: satisfactionData.distribution.map((item) => item.percentage),
             borderColor: "#1E88E5",
-            borderWidth: 1,
+            backgroundColor: "rgba(30, 136, 229, 0.1)",
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "#42A5F5",
+            pointBorderColor: "#1E88E5",
+            pointRadius: 5,
+            pointHoverRadius: 7,
           },
         ],
       }
     : null;
 
-  const programChartOptions = {
+  const satisfactionChartOptions = {
     maintainAspectRatio: false,
     aspectRatio: 0.8,
     plugins: {
       legend: {
-        display: false,
+        display: true,
+        position: 'top',
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return `${context.dataset.label}: ${context.parsed.y}%`;
+          }
+        }
       },
     },
     scales: {
       y: {
         beginAtZero: true,
+        max: 100,
         ticks: {
-          stepSize: 1,
+          stepSize: 10,
+          callback: function(value) {
+            return value + '%';
+          }
         },
+        title: {
+          display: true,
+          text: 'Percentage (%)'
+        }
       },
+      x: {
+        title: {
+          display: true,
+          text: 'Satisfaction Level'
+        }
+      }
     },
   };
 
@@ -389,26 +367,24 @@ const Dashboard = () => {
                 />
               </div>
 
-              <div className="form-group" style={{ marginTop: "15px" }}>
+              <div className="form-group" style={{ marginTop: "25px" }}>
                 <FloatLabel>
                   <InputText
                     id="etl-version"
                     value={etlForm.version}
                     onChange={(e) => setEtlForm({ ...etlForm, version: e.target.value })}
-                    placeholder="Ej: v2.0, 2024-11-15 (opcional)"
                     style={{ width: "100%" }}
                   />
                   <label htmlFor="etl-version">Versión (Opcional)</label>
                 </FloatLabel>
               </div>
 
-              <div className="form-group" style={{ marginTop: "15px" }}>
+              <div className="form-group" style={{ marginTop: "25px" }}>
                 <FloatLabel>
                   <InputText
                     id="etl-filename"
                     value={etlForm.filename}
                     onChange={(e) => setEtlForm({ ...etlForm, filename: e.target.value })}
-                    placeholder="nombre_archivo.csv (opcional)"
                     style={{ width: "100%" }}
                   />
                   <label htmlFor="etl-filename">Nombre del Archivo (Opcional)</label>
@@ -470,14 +446,25 @@ const Dashboard = () => {
           */}
 
           {/* Chart Section */}
-          <Card title="Performance Overview" className="section-card">
+          <Card title="Satisfaction Distribution Analysis" className="section-card">
             <div className="chart-container">
-              <Chart
-                type="line"
-                data={chartData}
-                options={chartOptions}
-                style={{ height: "300px" }}
-              />
+              {satisfactionData && satisfactionChartData ? (
+                <Chart
+                  type="line"
+                  data={satisfactionChartData}
+                  options={satisfactionChartOptions}
+                  style={{ height: "300px" }}
+                />
+              ) : loading ? (
+                <div style={{ textAlign: 'center', padding: '2rem' }}>
+                  <ProgressSpinner />
+                  <p>Loading chart data...</p>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '2rem', color: '#666' }}>
+                  <p>No satisfaction data available for chart</p>
+                </div>
+              )}
             </div>
           </Card>
 
