@@ -17,10 +17,16 @@ import { ProcListAPI, UserListAPI, AgentAPI, ReportsAPI } from '../../../service
 import auditLogger from '../../../utils/audit';
 import "./Proyecto.css";
 
-const Proyecto = () => {
+const UserProyecto = () => {
   const location = useLocation();
   const { id } = useParams();
+  
+  // Get process_id from query params (as passed from User Procesos page)
+  const urlParams = new URLSearchParams(location.search);
+  const processId = urlParams.get('process_id') || id;
+  
   console.log("LOCATION:", location);
+  console.log("Process ID from params:", processId);
 
   const process = location.state?.process;
 
@@ -28,23 +34,12 @@ const Proyecto = () => {
   const [projectData, setProjectData] = useState(process || null);
   const [loading, setLoading] = useState(!process);
   const [error, setError] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [saveLoading, setSaveLoading] = useState(false);
   const [users, setUsers] = useState([]);
   const [schools, setSchools] = useState([]);
   const [dropdownsLoading, setDropdownsLoading] = useState(false);
   const [files, setFiles] = useState([]);
   const [filesLoading, setFilesLoading] = useState(false);
   const [filesError, setFilesError] = useState(null);
-
-  // File upload state
-  const fileInputRef = useRef(null);
-  const [uploadForm, setUploadForm] = useState({
-    dataset_type: "egresados", // 'egresados' or 'profesores'
-    version: "", // version number for the file
-    file: null, // CSV/Excel file to upload
-  });
-  const [uploadLoading, setUploadLoading] = useState(false);
 
   // Dataset options for upload
   const datasetOptions = [
@@ -101,115 +96,147 @@ const Proyecto = () => {
     
     // Información académica
     { label: "Año de Graduación", value: "ig02_2_ano_de_graduacion" },
-    { label: "Tipo de Posgrado", value: "ig01_1_el_posgrado_que_usted_curso_es" },
+    { label: "Programa de Estudio", value: "ig01_1_programa_de_estudio_de_la_cual_se_graduo" },
+    { label: "Modalidad de Estudio", value: "ig03_3_la_modalidad_de_estudio_de_su_programa_fue" },
+    { label: "Becas", value: "ig06_6_durante_sus_estudios_conto_con_alguna_beca_o_ayuda_economica" },
+    { label: "Trabajo Durante Estudios", value: "ig07_7_durante_sus_estudios_universitarios_trabajo" },
     
-    // Información laboral
-    { label: "Condición Laboral Actual", value: "ipg05_7_cual_es_su_condicion_laboral_actual" },
+    // Información laboral actual
+    { label: "Condición Laboral", value: "ipg05_7_cual_es_su_condicion_laboral_actual" },
+    { label: "Satisfacción Trabajo", value: "ipg06_8_que_tan_satisfecho_se_encuentra_con_su_trabajo_actual" },
+    { label: "Relación Estudios-Trabajo", value: "ipg07_9_que_relacion_tiene_su_trabajo_actual_con_los_estudios_que_realizo" },
+    { label: "Salario", value: "ipg08_10_cual_es_su_salario_liquido_mensual_aproximado" },
+    { label: "Tiempo Encontrar Trabajo", value: "ipg09_11_cuanto_tiempo_le_tomo_encontrar_trabajo_despues_de_graduarse" },
     
-    // Satisfacción y experiencia
-    { label: "Grado de Satisfacción General", value: "ep07_18_en_general_cual_es_su_grado_de_satisfaccion_en_relacion" },
+    // Evaluación de la carrera
+    { label: "Recomendaría Carrera", value: "epg01_1_recomendaria_a_un_bachiller_estudiar_la_carrera_que_usted_estudio" },
+    { label: "Volvería a Estudiar", value: "epg02_2_si_tuviera_la_oportunidad_volveria_a_estudiar_la_misma_carrera" },
+    { label: "Volvería Misma U", value: "epg03_3_si_tuviera_la_oportunidad_volveria_a_estudiar_en_la_misma_universidad" },
+    { label: "Satisfacción Formación", value: "epg04_4_que_tan_satisfecho_esta_con_la_formacion_recibida_en_la_universidad" },
+    
+    // Competencias desarrolladas
+    { label: "Competencias Comunicativas", value: "cfg01_1_competencias_comunicativas_en_segunda_lengua_ingles" },
+    { label: "Competencias Ciudadanas", value: "cfg02_2_competencias_ciudadanas" },
+    { label: "Pensamiento Crítico", value: "cfg03_3_pensamiento_critico" },
+    { label: "Solución Problemas", value: "cfg04_4_solucion_de_problemas" },
+    { label: "Trabajo en Equipo", value: "cfg05_5_trabajo_en_equipo" },
+    { label: "Comunicación Oral", value: "cfg06_6_comunicacion_oral_y_escrita_en_la_propia_lengua" },
+    { label: "Responsabilidad Social", value: "cfg07_7_responsabilidad_social_y_compromiso_ciudadano" },
+    
+    // Satisfacción aspectos específicos
+    { label: "Satisfacción Plan Estudios", value: "esg01_1_plan_de_estudios" },
+    { label: "Satisfacción Docentes", value: "esg02_2_los_contenidos_del_programa_fueron_actualizados" },
+    { label: "Satisfacción Infraestructura", value: "esg03_3_los_docentes_utilizaron_tecnologias_y_herramientas_apropiadas" },
+    { label: "Satisfacción Recursos", value: "esg04_4_los_metodos_de_ensenanza_fueron_adecuados_para_el_aprendizaje" }
   ];
 
-  // Filter options based on database values
+  // Estado options for dropdowns
+  const estadoOptions = [
+    { label: "Pendiente", value: "pending" },
+    { label: "En Progreso", value: "in-progress" },
+    { label: "Completado", value: "completed" },
+    { label: "Cancelado", value: "cancelled" }
+  ];
+
+  // Filter options
   const filterOptions = {
     sexo: [
       { label: "Hombre", value: "Hombre" },
       { label: "Mujer", value: "Mujer" }
     ],
     estado_civil: [
-      { label: "Soltero(a)", value: "Soltero(a)" },
-      { label: "Casado(a), unión de hecho", value: "Casado(a), unión de hecho" },
-      { label: "Otro", value: "Otro" }
+      { label: "Soltero", value: "Soltero" },
+      { label: "Casado", value: "Casado" },
+      { label: "Union libre", value: "Union libre" },
+      { label: "Divorciado", value: "Divorciado" },
+      { label: "Viudo", value: "Viudo" }
     ],
     condicion_laboral: [
-      { label: "Trabaja jornada completa", value: "Trabaja jornada completa" },
-      { label: "Trabaja medio tiempo o menos", value: "Trabaja medio tiempo o menos" },
-      { label: "No trabaja", value: "No trabaja" }
+      { label: "Solo trabaja", value: "Solo trabaja" },
+      { label: "Solo estudia", value: "Solo estudia" },
+      { label: "Trabaja y estudia", value: "Trabaja y estudia" },
+      { label: "Busca trabajo", value: "Busca trabajo" },
+      { label: "No trabaja ni estudia ni busca trabajo", value: "No trabaja ni estudia ni busca trabajo" }
     ]
   };
 
-  // Estado options
-  const estadoOptions = [
-    {label:"Fallido", value: "Fallido"}, 
-    {label:"En proceso", value: "En proceso"}, 
-    {label:"Activo", value: "Activo"},
-    {label:"Completado",value:"Completado"}
-  ];
+  // Get current user for access control
+  const [currentUser, setCurrentUser] = useState(null);
 
-  // If we don't have process data from location.state, fetch it by ID
   useEffect(() => {
-    if (!process && id) {
-      fetchProjectData(id);
-    }
-  }, [id, process]);
-
-  // Load dropdown data when editing starts
-  useEffect(() => {
-    if (isEditing && (users.length === 0 || schools.length === 0)) {
-      loadDropdownData();
-    }
-  }, [isEditing]);
-
-  // When users data is loaded, make sure we have the encargado_id
-  useEffect(() => {
-    if (users.length > 0 && projectData && projectData.encargado && !projectData.encargado_id) {
-      const matchingUser = users.find(u => u.username === projectData.encargado);
-      if (matchingUser) {
-        setProjectData(prev => ({
-          ...prev,
-          encargado_id: matchingUser.id
-        }));
-      }
-    }
-  }, [users, projectData]);
-
-  // Load files when project data is available
-  useEffect(() => {
-    if (projectData && projectData.id) {
-      loadFiles(projectData.id);
-    }
-  }, [projectData]);
-
-  const fetchProjectData = async (processId) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await ProcListAPI.getProcById(processId);
-      setProjectData(data);
-      
-      // Log audit action for viewing project
-      await auditLogger.projectView(data.process_name, data.school_id);
-      
-    } catch (err) {
-      console.error('Error fetching project data:', err);
-      setError('Error al cargar los datos del proyecto');
-    } finally {
+    console.log("UseEffect triggered with processId:", processId);
+    checkUserAccess();
+    
+    if (process) {
+      console.log("Using process from location.state:", process);
+      setProjectData(process);
+      loadFiles(process.id);
+    } else if (processId) {
+      console.log("Fetching project data for ID:", processId);
+      fetchProjectData(processId);
+    } else {
+      console.log("No process ID found");
+      setError('No se especificó un ID de proceso válido');
       setLoading(false);
+    }
+  }, [processId, process]);
+
+  const checkUserAccess = async () => {
+    try {
+      const user = await UserListAPI.getCurrentUser();
+      console.log("Current user loaded:", user);
+      setCurrentUser(user);
+    } catch (err) {
+      console.error('Error getting current user:', err);
     }
   };
 
-  const formatSchools = (data)=>{
-    console.log("School: ", data);
-    const schoolOptions = data.map((school) => ({
-          label: school.name,
-          value: school.id,
-        }));
-    setSchools(schoolOptions);
-  }
-
-  const loadDropdownData = async () => {
+  const fetchProjectData = async (projectId) => {
     try {
-      setDropdownsLoading(true);
-      const [usersData, schoolsData] = await Promise.all([
-        UserListAPI.getUsersForDropdown(),
-        UserListAPI.getSchools()
-      ]);
-      setUsers(usersData);
-      formatSchools(schoolsData);
+      console.log("fetchProjectData called with:", projectId);
+      setLoading(true);
+      setError(null);
+      
+      // Get current user info for debugging
+      const currentUser = await UserListAPI.getCurrentUser();
+      console.log("Current user for access check:", currentUser);
+      
+      // Get user processes to check if this user has access to this process
+      console.log("Fetching user processes...");
+      const userProcesses = await ProcListAPI.getUserProcList();
+      console.log("User processes received:", userProcesses);
+      console.log("Number of accessible processes:", userProcesses.length);
+      
+      const process = userProcesses.find(p => p.id.toString() === projectId.toString());
+      console.log("Looking for process with ID:", projectId);
+      console.log("Found process:", process);
+      
+      if (!process) {
+        console.log("Process not found. Available process IDs:", userProcesses.map(p => p.id));
+        
+        // Try to get the process directly to see if it exists at all
+        try {
+          const directProcess = await ProcListAPI.getProcById(projectId);
+          console.log("Process exists but no access:", directProcess);
+          setError(`No tienes acceso a este proceso. El proceso pertenece a: ${directProcess.encargado || 'No asignado'}`);
+        } catch (directError) {
+          console.log("Process doesn't exist at all:", directError);
+          setError('El proceso no existe o ha sido eliminado');
+        }
+        return;
+      }
+      
+      setProjectData(process);
+      console.log("Project data set:", process);
+      
+      // Load files for this process
+      await loadFiles(process.id);
+      
     } catch (err) {
-      console.error('Error loading dropdown data:', err);
+      console.error('Error fetching project:', err);
+      setError('Error al cargar el proyecto: ' + err.message);
     } finally {
-      setDropdownsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -225,206 +252,6 @@ const Proyecto = () => {
       setFilesError('Error al cargar los archivos');
     } finally {
       setFilesLoading(false);
-    }
-  };
-
-  const handleChange = (field, value) => {
-    console.log(`Updating field "${field}" with value:`, value);
-    setProjectData(prev => {
-      const newData = {
-        ...prev,
-        [field]: value
-      };
-      console.log("New project data:", newData);
-      return newData;
-    });
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaveLoading(true);
-      
-      // Prepare the data for the API (only send fields that can be updated)
-      const updateData = {
-        process_name: projectData.process_name,
-        estado: projectData.estado,
-        school_id: projectData.school_id,
-        encargado_id: projectData.encargado_id
-      };
-
-      console.log("Sending update data:", updateData);
-      console.log("Project ID:", projectData.id);
-      console.log("Current projectData:", {
-        process_name: projectData.process_name,
-        estado: projectData.estado,
-        school_id: projectData.school_id,
-        encargado_id: projectData.encargado_id,
-        unidad: projectData.unidad,
-        encargado: projectData.encargado
-      });
-
-      // Call the API to update the project
-      const updatedProject = await ProcListAPI.updateProc(projectData.id, updateData);
-      
-      console.log("Received updated project:", updatedProject);
-      
-      // Update the local state with the response from the server
-      setProjectData(updatedProject);
-      setIsEditing(false);
-      
-      console.log("Project updated successfully:", updatedProject);
-      
-      // Log audit action for project update
-      await auditLogger.projectUpdate(updatedProject.process_name, updatedProject.school_id);
-      
-      // Show success message (you can use a toast library for better UX)
-      alert("Proyecto actualizado correctamente");
-      
-    } catch (error) {
-      console.error("Error updating project:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response,
-        status: error.status
-      });
-      alert("Error al actualizar proyecto: " + error.message);
-    } finally {
-      setSaveLoading(false);
-    }
-  };
-
-  const handleDownloadFile = async (fileData) => {
-    try {
-      // Use the existing downloadFile API endpoint
-      const response = await ProcListAPI.downloadFile(fileData.path);
-      
-      // Convert response to blob and download
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileData.name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      // Log audit action for file download
-      await auditLogger.fileDownload(fileData.name, projectData?.process_name, projectData?.school_id);
-      
-    } catch (error) {
-      console.error('Error downloading file:', error);
-      alert('Error al descargar el archivo: ' + error.message);
-    }
-  };
-
-  const handleViewFile = (fileData) => {
-    // For now, just show file information
-    alert(`Archivo: ${fileData.name}\nTipo: ${fileData.type}\nTamaño: ${fileData.size} bytes\nRuta: ${fileData.path}`);
-    // TODO: Implement file content viewing (for CSV files, show preview table)
-  };
-
-  // File upload functions
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type (CSV or Excel)
-      const validExtensions = [".csv", ".xlsx", ".xls"];
-      const fileExtension = file.name
-        .toLowerCase()
-        .substring(file.name.lastIndexOf("."));
-
-      if (!validExtensions.includes(fileExtension)) {
-        alert(
-          "Por favor seleccione un archivo CSV (.csv) o Excel (.xlsx, .xls) válido"
-        );
-        return;
-      }
-
-      // Validate file naming pattern (check name without extension)
-      const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf("."));
-      const expectedNameWithoutExt = `${uploadForm.dataset_type}_${uploadForm.version}`;
-
-      if (nameWithoutExt !== expectedNameWithoutExt) {
-        alert(
-          `El archivo debe llamarse exactamente: ${expectedNameWithoutExt}.csv o ${expectedNameWithoutExt}.xlsx`
-        );
-        return;
-      }
-
-      setUploadForm({ ...uploadForm, file });
-    }
-  };
-
-  const handleFileUpload = async () => {
-    try {
-      setUploadLoading(true);
-
-      // Validate required fields
-      if (!uploadForm.version) {
-        alert("Por favor ingrese la versión");
-        return;
-      }
-
-      if (!uploadForm.file) {
-        alert("Por favor seleccione un archivo");
-        return;
-      }
-
-      // Get school name for MinIO path (using projectData.unidad as the school name)
-      const schoolName = projectData?.unidad;
-      if (!schoolName) {
-        alert("No se puede determinar la escuela del proyecto");
-        return;
-      }
-
-      // Create FormData for file upload (simplified for file-only upload)
-      const formData = new FormData();
-      formData.append("school_name", schoolName); // Use school name for MinIO path
-      formData.append("dataset_type", uploadForm.dataset_type);
-      formData.append("file", uploadForm.file);
-
-      // Debug: Check if auth token is available
-      const token = localStorage.getItem("access_token");
-      console.log("Auth token available:", !!token);
-      if (!token) {
-        alert(
-          "No se encontró token de autenticación. Por favor inicie sesión nuevamente."
-        );
-        return;
-      }
-
-      // Call the new API to upload the file only (without creating a process)
-      await ProcListAPI.uploadFile(formData);
-
-      // Reset the form
-      setUploadForm({
-        dataset_type: "egresados",
-        version: "",
-        file: null,
-      });
-
-      // Clear file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-
-      alert("Archivo subido correctamente");
-      
-      // Log audit action for file upload
-      await auditLogger.fileUpload(uploadForm.file.name, projectData?.process_name, projectData?.school_id);
-      
-      // Reload files to show the new upload
-      if (projectData?.id) {
-        loadFiles(projectData.id);
-      }
-      
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      alert("Error al subir archivo: " + error.message);
-    } finally {
-      setUploadLoading(false);
     }
   };
 
@@ -471,7 +298,7 @@ const Proyecto = () => {
         distribuciones = analyticsForm.distribuciones || [];
       }
 
-      // Prepare payload for analytics
+      // Prepare payload for analytics (matching Admin structure)
       const payload = {
         poblacion: {
           dataset: analyticsForm.dataset,
@@ -482,19 +309,15 @@ const Proyecto = () => {
         tipo_analitica: analyticsForm.tipo_analitica
       };
 
-      console.log("Running analytics with payload:", payload);
-      console.log("DEBUG - analyticsForm state:", analyticsForm);
-      console.log("DEBUG - distribuciones value:", distribuciones);
-      console.log("DEBUG - distribuciones type:", typeof distribuciones);
+      console.log('Analytics payload:', payload);
+      console.log('DEBUG - analyticsForm state:', analyticsForm);
+      console.log('DEBUG - distribuciones value:', distribuciones);
+      console.log('DEBUG - distribuciones type:', typeof distribuciones);
 
-      // Call analytics API
       const results = await AgentAPI.getAnalytics(payload);
       setAnalyticsResults(results);
 
       console.log("Analytics results:", results);
-
-      // Log audit action
-      await auditLogger.analyticsRun(analyticsForm.tipo_analitica, analyticsForm.dataset, projectData?.school_id);
 
     } catch (error) {
       console.error("Error running analytics:", error);
@@ -585,28 +408,45 @@ const Proyecto = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'No disponible';
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleDownloadFile = async (fileData) => {
+    try {
+      console.log('Downloading file:', fileData);
+      const response = await ProcListAPI.downloadFile(fileData.path, fileData.filename);
+      
+      // Create download link
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileData.filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading file:', err);
+      setError('Error al descargar el archivo: ' + err.message);
+    }
+  };
+
+  const handleViewFile = async (fileData) => {
+    try {
+      console.log('Viewing file:', fileData);
+      // Implement file viewing logic here
+      // This could open a modal with file content or navigate to a view page
+    } catch (err) {
+      console.error('Error viewing file:', err);
+      setError('Error al visualizar el archivo: ' + err.message);
+    }
   };
 
   const getEstadoSeverity = (estado) => {
-    switch (estado?.toLowerCase()) {
-      case 'completado':
-      case 'finalizado':
+    switch (estado) {
+      case 'completed':
         return 'success';
-      case 'activo':
-        return 'info';
-      case 'en proceso':
+      case 'in-progress':
         return 'warning';
-      case 'error':
-      case 'fallido':
+      case 'cancelled':
         return 'danger';
       default:
         return 'secondary';
@@ -626,11 +466,24 @@ const Proyecto = () => {
     if (error) {
       return (
         <div className="error-container">
+          <i className="pi pi-exclamation-triangle" style={{ fontSize: '2rem', color: '#e74c3c', marginBottom: '1rem' }}></i>
           <p className="error-message">{error}</p>
           <Button 
             label="Reintentar" 
-            onClick={() => fetchProjectData(id)}
+            onClick={() => {
+              if (processId) {
+                fetchProjectData(processId);
+              } else {
+                setError('No se especificó un ID de proceso válido');
+              }
+            }}
             className="p-button-outlined"
+          />
+          <Button 
+            label="Volver a Procesos" 
+            onClick={() => window.history.back()}
+            className="p-button-text"
+            style={{ marginLeft: '1rem' }}
           />
         </div>
       );
@@ -639,7 +492,14 @@ const Proyecto = () => {
     if (!projectData) {
       return (
         <div className="error-container">
+          <i className="pi pi-info-circle" style={{ fontSize: '2rem', color: '#f39c12', marginBottom: '1rem' }}></i>
           <p>No se encontraron datos del proyecto</p>
+          <p>ID del proceso: {processId}</p>
+          <Button 
+            label="Volver a Procesos" 
+            onClick={() => window.history.back()}
+            className="p-button-outlined"
+          />
         </div>
       );
     }
@@ -650,91 +510,40 @@ const Proyecto = () => {
           <Card className="info-card">
             <div className="info-item">
               <label>Nombre del Proyecto:</label>
-              {isEditing ? (
-                <InputText
-                  value={projectData.process_name || ''}
-                  onChange={(e) => handleChange('process_name', e.target.value)}
-                  className="editable-input"
-                />
-              ) : (
-                <span className="info-value">{projectData.process_name}</span>
-              )}
+              <span className="info-value">{projectData.process_name}</span>
             </div>
             
             <div className="info-item">
               <label>Encargado:</label>
-              {isEditing ? (
-                <Dropdown
-                  value={users.find(u => u.id === projectData.encargado_id)}
-                  options={users}
-                  onChange={(e) => {
-                    const selectedUser = e.target.value;
-                    handleChange('encargado', selectedUser.username);
-                    handleChange('encargado_id', selectedUser.id);
-                  }}
-                  optionLabel="username"
-                  placeholder="Selecciona un encargado"
-                  className="editable-dropdown"
-                  loading={dropdownsLoading}
-                />
-              ) : (
-                <span className="info-value">{projectData.encargado || 'No asignado'}</span>
-              )}
+              <span className="info-value">{projectData.encargado || 'No asignado'}</span>
             </div>
             
             <div className="info-item">
               <label>Estado:</label>
-              {isEditing ? (
-                <Dropdown
-                  value={estadoOptions.find(e => e.value === projectData.estado)}
-                  options={estadoOptions}
-                  onChange={(e) => handleChange('estado', e.target.value)}
-                  optionLabel="label"
-                  placeholder="Selecciona un estado"
-                  className="editable-dropdown"
-                />
-              ) : (
-                <Tag 
-                  value={projectData.estado || 'Sin estado'} 
-                  severity={getEstadoSeverity(projectData.estado)}
-                  className="estado-tag"
-                />
-              )}
+              <Tag 
+                value={projectData.estado || 'Sin estado'} 
+                severity={getEstadoSeverity(projectData.estado)}
+                className="estado-tag"
+              />
             </div>
             
             <div className="info-item">
-              <label>Unidad/Escuela:</label>
-              {isEditing ? (
-                <Dropdown
-                  value={schools.find(s => s.value === projectData.school_id)}
-                  options={schools}
-                  onChange={(e) => {
-                    const selectedSchool = e.value;
-                    handleChange('school_id', selectedSchool);
-                  }}
-                  optionLabel="label"
-                  placeholder="Selecciona una escuela"
-                  className="editable-dropdown"
-                  loading={dropdownsLoading}
-                />
-              ) : (
-                <span className="info-value">{projectData.unidad || 'No especificada'}</span>
-              )}
+              <label>Unidad:</label>
+              <span className="info-value">{projectData.unidad}</span>
             </div>
             
             <div className="info-item">
               <label>Fecha de Creación:</label>
-              <span className="info-value">{formatDate(projectData.created_at)}</span>
+              <span className="info-value">
+                {projectData.created_at ? new Date(projectData.created_at).toLocaleDateString('es-ES') : 'No disponible'}
+              </span>
             </div>
             
             <div className="info-item">
               <label>Última Actualización:</label>
-              <span className="info-value">{formatDate(projectData.updated_at)}</span>
-            </div>
-            
-            <div className="info-item">
-              <label>ID del Proyecto:</label>
-              <span className="info-value">#{projectData.id}</span>
+              <span className="info-value">
+                {projectData.updated_at ? new Date(projectData.updated_at).toLocaleDateString('es-ES') : 'No disponible'}
+              </span>
             </div>
           </Card>
         </div>
@@ -850,140 +659,39 @@ const Proyecto = () => {
                   <Column 
                     field="name" 
                     header="Nombre del Archivo" 
-                    sortable
+                    sortable 
                     style={{ minWidth: '200px' }}
                   />
                   <Column 
                     field="type" 
                     header="Tipo" 
                     body={typeTemplate}
-                    sortable
-                    style={{ width: '120px' }}
+                    sortable 
+                    style={{ minWidth: '100px' }}
                   />
                   <Column 
                     field="size" 
                     header="Tamaño" 
                     body={sizeTemplate}
-                    sortable
-                    style={{ width: '100px' }}
+                    sortable 
+                    style={{ minWidth: '100px' }}
                   />
                   <Column 
                     field="last_modified" 
                     header="Última Modificación" 
                     body={dateTemplate}
-                    sortable
-                    style={{ width: '180px' }}
+                    sortable 
+                    style={{ minWidth: '150px' }}
                   />
                   <Column 
                     header="Acciones" 
                     body={actionTemplate}
-                    style={{ width: '120px' }}
+                    exportable={false}
+                    style={{ minWidth: '100px' }}
                   />
                 </DataTable>
               </Card>
             )}
-          </AccordionTab>
-
-          {/* File Upload Section */}
-          <AccordionTab header="Subir Nuevo Archivo" className="datos-tab">
-            <Card className="upload-card">
-              <div className="upload-content">
-                <h4>Subir archivo de datos</h4>
-                <p>Sube un archivo CSV o Excel para {projectData?.unidad || 'esta escuela'}</p>
-                
-                <div className="upload-form">
-                  <div className="form-group">
-                    <label
-                      htmlFor="dataset_type"
-                      style={{
-                        marginBottom: "10px",
-                        display: "block",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Tipo de Dataset *
-                    </label>
-                    <Dropdown
-                      id="dataset_type"
-                      value={uploadForm.dataset_type}
-                      onChange={(e) =>
-                        setUploadForm({ ...uploadForm, dataset_type: e.value })
-                      }
-                      options={datasetOptions}
-                      placeholder="Seleccionar tipo"
-                      className="input-field"
-                      style={{ width: "100%" }}
-                    />
-                  </div>
-
-                  <FloatLabel style={{ marginTop: "20px" }}>
-                    <InputText
-                      id="version"
-                      value={uploadForm.version}
-                      onChange={(e) =>
-                        setUploadForm({ ...uploadForm, version: e.target.value })
-                      }
-                      placeholder="Ej. 2024"
-                      className="input-field"
-                      required
-                    />
-                    <label htmlFor="version">Versión *</label>
-                  </FloatLabel>
-
-                  <div className="form-group" style={{ marginTop: "20px" }}>
-                    <label
-                      htmlFor="file"
-                      style={{
-                        marginBottom: "10px",
-                        display: "block",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Archivo CSV/Excel *
-                    </label>
-                    <input
-                      type="file"
-                      id="file"
-                      ref={fileInputRef}
-                      accept=".csv,.xlsx,.xls"
-                      onChange={handleFileChange}
-                      className="input-field"
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                      }}
-                    />
-                    <small
-                      style={{
-                        color: "#666",
-                        fontSize: "12px",
-                        marginTop: "5px",
-                        display: "block",
-                      }}
-                    >
-                      El archivo debe llamarse: {uploadForm.dataset_type}_
-                      {uploadForm.version || "VERSION"}.csv o .xlsx
-                    </small>
-                  </div>
-
-                  <div style={{ marginTop: "20px", textAlign: "center" }}>
-                    <Button
-                      label="Subir Archivo"
-                      icon="pi pi-upload"
-                      onClick={handleFileUpload}
-                      loading={uploadLoading}
-                      disabled={
-                        !uploadForm.version ||
-                        !uploadForm.file
-                      }
-                      className="p-button-success"
-                    />
-                  </div>
-                </div>
-              </div>
-            </Card>
           </AccordionTab>
         </Accordion>
       </div>
@@ -1431,20 +1139,13 @@ const Proyecto = () => {
       
       <div className="proyecto-header">
         <h1 className="page-title">
-          {loading ? 'Cargando...' : (projectData?.process_name || 'Proyecto')}
+          {loading ? 'Cargando...' : (projectData?.process_name || `Proyecto ${processId || 'Sin ID'}`)}
         </h1>
-        {!loading && !error && projectData && (
-          <Button
-            icon={isEditing ? "pi pi-save" : "pi pi-pencil"}
-            label={isEditing ? "Guardar" : "Editar"}
-            className="p-button-rounded p-button-primary edit-btn"
-            loading={saveLoading}
-            disabled={saveLoading || dropdownsLoading}
-            onClick={() => {
-              if (isEditing) handleSave();
-              else setIsEditing(true);
-            }}
-          />
+        {/* Debug info - remove in production */}
+        {!loading && processId && (
+          <small style={{ color: '#666', fontSize: '0.8rem', display: 'block', marginTop: '0.5rem' }}>
+            ID del proceso: {processId} | Datos cargados: {projectData ? 'Sí' : 'No'} | Error: {error ? 'Sí' : 'No'}
+          </small>
         )}
       </div>
 
@@ -1465,4 +1166,4 @@ const Proyecto = () => {
   );
 };
 
-export default Proyecto;
+export default UserProyecto;

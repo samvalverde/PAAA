@@ -5,9 +5,7 @@
   background-color: #f8f9fa;
   margin: 0;
   padding: 0;
-  padding-left: clamp(1rem, 4vw, 4.5rem);
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .sidebar-toggle {
@@ -24,10 +22,9 @@
 .dashboard-content {
   flex: 1;
   padding: 1rem;
-  overflow-y: auto; /* Keep vertical scroll for content */
-  overflow-x: hidden; /* Prevent horizontal scroll */
-  margin-left: 0;
-  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
   box-sizing: border-box;
 }
 
@@ -37,16 +34,17 @@
   box-sizing: border-box;
 }
 
-.dashboard-header h2 {
-  margin: 0;
-  color: #495057;
-  font-size: 1.8rem;
+.dashboard-content .dashboard-header h2 {
+  margin: 0 !important;
+  color: #495057 !important;
+  font-size: 1.8rem !important;
+  font-weight: 600 !important;
 }
 
-.dashboard-header p {
-  margin: 0.5rem 0 0 0;
-  color: #6c757d;
-  font-size: 0.9rem;
+.dashboard-content .dashboard-header p {
+  margin: 0.5rem 0 0 0 !important;
+  color: #6c757d !important;
+  font-size: 0.9rem !important;
 }
 
 /* KPI Grid */
@@ -57,8 +55,6 @@
   margin-bottom: 1.5rem;
   width: 100%;
   box-sizing: border-box;
-  max-height: 250px;
-  overflow-y: scroll;
 }
 
 .kpi-card {
@@ -107,12 +103,24 @@
 /* Main Grid Layout */
 .main-grid {
   display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  grid-template-rows: auto auto;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
   width: 100%;
   box-sizing: border-box;
-  min-height: 400px;
+  align-items: start;
+}
+
+/* Section cards have consistent sizing */
+.section-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  border: none;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Tasks Section */
@@ -151,11 +159,12 @@
   font-size: 0.9rem;
 }
 
-/* Table Section */
+/* Table Section - full width on its own row */
 .table-section {
   grid-column: 1 / -1;
   width: 100%;
   box-sizing: border-box;
+  margin-top: 1rem;
 }
 
 .section-card {
@@ -194,48 +203,41 @@
   font-size: 0.8rem;
 }
 
-/* Ensure no horizontal overflow anywhere */
-* {
-  box-sizing: border-box;
-}
-
-body, html {
-  margin: 0;
-  padding: 0;
-  width: 100vw;
-  height: 100vh;
-}
-
 /* Responsive Design */
 @media (max-width: 1200px) {
   .main-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .section-card {
+    min-height: 250px;
   }
 }
 
 @media (max-width: 968px) {
-  .main-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-    gap: 1rem;
-  }
-  
-  .table-section {
-    grid-column: 1;
+  .dashboard-content {
+    padding: 0.75rem;
   }
   
   .kpi-grid {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.75rem;
   }
   
-  .chart-placeholder {
-    height: 200px;
+  .main-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .section-card {
+    min-height: 200px;
   }
 }
 
 @media (max-width: 768px) {
   .dashboard-content {
-    padding: 0.75rem;
+    padding: 0.5rem;
   }
 
   .kpi-grid {
@@ -252,7 +254,11 @@ body, html {
   }
   
   .dashboard-header h2 {
-    font-size: 1.5rem;
+    font-size: 1.5rem !important;
+  }
+  
+  .section-card {
+    min-height: 180px;
   }
 }
 
@@ -270,6 +276,7 @@ body, html {
   }
   
   .section-card {
+    min-height: 150px;
     padding: 0.75rem;
   }
   
@@ -294,13 +301,14 @@ body, html {
 
 /* ETL Load Component Styles */
 .etl-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: white;
+  color: #2d3748;
   border-radius: 12px;
+  border: 2px solid #667eea;
 }
 
 .etl-card .p-card-title {
-  color: white;
+  color: #667eea;
   font-weight: bold;
 }
 
@@ -309,12 +317,12 @@ body, html {
 }
 
 .etl-form h4 {
-  color: white;
+  color: #2d3748;
   margin-bottom: 0.5rem;
 }
 
 .etl-form p {
-  color: rgba(255, 255, 255, 0.9);
+  color: #4a5568;
   margin-bottom: 1.5rem;
 }
 
@@ -323,37 +331,190 @@ body, html {
 }
 
 .etl-form .form-group label {
-  color: white;
+  color: #2d3748 !important;
   font-weight: bold;
+}
+
+/* Fix for all labels in the ETL form */
+.etl-form label {
+  color: #2d3748 !important;
+  font-weight: bold;
+}
+
+/* Fix for FloatLabel component */
+.etl-form .p-float-label label {
+  color: #4a5568 !important;
+}
+
+.etl-form .p-float-label label.p-float-label-active {
+  color: #2d3748 !important;
 }
 
 .etl-form .p-dropdown,
 .etl-form .p-inputtext {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #2d3748 !important;
+}
+
+.etl-form .p-dropdown .p-dropdown-label {
+  color: #2d3748 !important;
+}
+
+.etl-form .p-inputtext::placeholder {
+  color: #6c757d !important;
+}
+
+.etl-form .p-float-label > label {
+  color: #4a5568 !important;
+  font-weight: bold;
+}
+
+.etl-form .p-dropdown-panel {
+  background: white;
+}
+
+.etl-form .p-dropdown-panel .p-dropdown-item {
+  color: #2d3748 !important;
 }
 
 .etl-form .p-dropdown:not(.p-disabled):hover,
 .etl-form .p-inputtext:enabled:hover {
-  border-color: rgba(255, 255, 255, 0.8);
+  border-color: #667eea;
 }
 
 .etl-form .p-dropdown:not(.p-disabled).p-focus,
 .etl-form .p-inputtext:enabled:focus {
   outline: 0 none;
   outline-offset: 0;
-  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.2);
+  border-color: #667eea;
+  color: #2d3748 !important;
+}
+
+/* ETL Button styling */
+.etl-form .p-button {
+  background: #667eea;
+  border: 2px solid #667eea;
+  color: white;
+  font-weight: 600;
+}
+
+.etl-form .p-button:hover {
+  background: #5a67d8;
+  border-color: #5a67d8;
+}
+
+.etl-form .p-button.p-button-success {
+  background: #48bb78;
+  border-color: #48bb78;
+}
+
+.etl-form .p-button.p-button-success:hover {
+  background: #38a169;
+  border-color: #38a169;
+}
+
+/* Progress text styling */
+.etl-form .p-progressspinner + p {
+  color: #4a5568 !important;
+  font-weight: 500;
+}
+
+/* Remove conflicting white text rules and set everything to dark */
+.etl-form * {
+  color: #2d3748 !important;
+}
+
+/* Specific overrides for components that need different colors */
+.etl-form .p-dropdown,
+.etl-form .p-dropdown-label,
+.etl-form .p-inputtext {
+  color: #2d3748 !important;
+}
+
+.etl-form .p-dropdown-panel .p-dropdown-item {
+  color: #2d3748 !important;
+}
+
+/* Placeholder text */
+.etl-form .p-inputtext::placeholder {
+  color: #6c757d !important;
+  opacity: 1;
+}
+
+/* Float label specific fixes to prevent overlap */
+.etl-form .p-float-label {
+  position: relative;
+}
+
+.etl-form .p-float-label > label {
+  color: #4a5568 !important;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.etl-form .p-float-label > .p-inputtext {
+  padding-top: 1.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.etl-form .p-float-label > .p-inputtext:focus ~ label,
+.etl-form .p-float-label > .p-inputtext.p-filled ~ label {
+  top: 0.25rem;
+  font-size: 0.75rem;
+  color: #667eea !important;
+}
+
+/* Fix button text color */
+.etl-form .p-button {
+  color: white !important;
+}
+
+/* FileUpload component fixes */
+.etl-form .p-fileupload {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+}
+
+.etl-form .p-fileupload .p-fileupload-content {
+  background: transparent;
+}
+
+.etl-form .p-fileupload .p-fileupload-file {
+  color: #2d3748 !important;
+}
+
+.etl-form .p-fileupload .p-fileupload-filename {
+  color: #2d3748 !important;
+}
+
+.etl-form .p-fileupload-choose {
+  background: #667eea !important;
+  border: 1px solid #667eea !important;
+  color: white !important;
+}
+
+.etl-form .p-fileupload-choose:hover {
+  background: #5a67d8 !important;
+  border-color: #5a67d8 !important;
 }
 
 .etl-results {
-  background: rgba(255, 255, 255, 0.1);
+  background: #e3f2fd;
   padding: 1rem;
   border-radius: 8px;
   margin-top: 1rem;
+  border: 1px solid #90caf9;
 }
 
 .etl-results p {
   margin: 0.5rem 0;
-  color: #1976d2;
+  color: #1565c0 !important;
+  font-weight: 500;
+}
+
+.etl-results strong {
+  color: #0d47a1;
+  font-weight: 600;
 }

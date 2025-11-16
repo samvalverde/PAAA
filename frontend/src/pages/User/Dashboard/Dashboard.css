@@ -1,0 +1,155 @@
+/* User Dashboard CSS - Inherits from Admin Dashboard */
+@import "../../../pages/Admin/Dashboard/Dashboard.css";
+
+/* User-specific styling overrides and additions */
+
+.user-info-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white;
+  margin-bottom: 1.5rem;
+}
+
+.user-info-card .p-card-content {
+  padding: 1.5rem;
+}
+
+.user-info-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.user-avatar {
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-details h3 {
+  color: white !important;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.user-details p {
+  color: rgba(255, 255, 255, 0.9) !important;
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.section-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+}
+
+.no-processes-message {
+  text-align: center;
+  padding: 2rem;
+  color: #6c757d;
+}
+
+.no-processes-message h4 {
+  color: #495057 !important;
+  margin: 0.5rem 0;
+}
+
+.no-processes-message p {
+  margin: 0.5rem 0;
+  font-style: italic;
+}
+
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quick-action-btn {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 0.75rem 1rem;
+}
+
+.user-processes-table {
+  width: 100%;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.status-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-badge.status-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  text-align: center;
+  gap: 1rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .main-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .user-info-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  .kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .quick-actions {
+    gap: 0.5rem;
+  }
+  
+  .dashboard-content {
+    padding: 0.75rem;
+  }
+}

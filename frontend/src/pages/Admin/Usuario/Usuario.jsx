@@ -94,31 +94,49 @@ const Usuario = () => {
         onHide={() => setSidebarVisible(false)}
       />
 
-      <div className="usuario-header">
-        <h1 className="page-title">Usuario: {User.username}</h1>
-        <Button
-          icon={isEditing ? "pi pi-save" : "pi pi-pencil"}
-          label={isEditing ? "Guardar" : "Editar"}
-          className="p-button-rounded p-button-primary edit-btn"
-          loading={loading}
-          disabled={loading}
-          onClick={() => {
-            if (isEditing) handleSave();
-            else setIsEditing(true);
-          }}
-        />
-      </div>
+      <div className="usuario-content">
+        <div className="usuario-header">
+          <h1 className="page-title">Perfil de Usuario</h1>
+          <Button
+            icon={isEditing ? "pi pi-save" : "pi pi-pencil"}
+            label={isEditing ? "Guardar" : "Editar"}
+            className="p-button-rounded p-button-primary edit-btn"
+            loading={loading}
+            disabled={loading}
+            onClick={() => {
+              if (isEditing) handleSave();
+              else setIsEditing(true);
+            }}
+          />
+        </div>
 
-      <div>
         <Card className="user-body">
-          <h2>{User.username}</h2>
+          <div className="profile-header">
+            <div className="profile-avatar">
+              {User.username ? User.username.charAt(0).toUpperCase() : "U"}
+            </div>
+            <h2 className="profile-name">{User.username}</h2>
+            <span className="profile-role">{User.role}</span>
+          </div>
 
           <div className="user-info">
+            {/* Username */}
+            <div className="field">
+              <label className="field-label">Usuario</label>
+              {isEditing ? (
+                <InputText
+                  value={User.username}
+                  onChange={(e) => handleChange("username", e.target.value)}
+                  className="editable-input"
+                />
+              ) : (
+                <span className="field-value">{User.username}</span>
+              )}
+            </div>
+
             {/* Email */}
             <div className="field">
-              <Tag severity="info" className="field-label">
-                Correo:
-              </Tag>
+              <label className="field-label">Correo Electrónico</label>
               {isEditing ? (
                 <InputText
                   value={User.email}
@@ -132,13 +150,11 @@ const Usuario = () => {
 
             {/* Phone */}
             <div className="field">
-              <Tag severity="info" className="field-label">
-                Teléfono:
-              </Tag>
+              <label className="field-label">Teléfono</label>
               {isEditing ? (
                 <InputText
                   value={User.phone_number}
-                  onChange={(e) => handleChange("phone", e.target.value)}
+                  onChange={(e) => handleChange("phone_number", e.target.value)}
                   className="editable-input"
                 />
               ) : (
@@ -148,52 +164,35 @@ const Usuario = () => {
 
             {/* Role */}
             <div className="field">
-              <Tag severity="info" className="field-label">
-                Rol:
-              </Tag>
+              <label className="field-label">Rol</label>
               {isEditing ? (
-                <Dropdown value={User.role} options={roles} optionLabel="lable"
-                onChange={(e) => handleChange("role", e.target.value)}/>
+                <Dropdown 
+                  value={roles.find(r => r.lable === User.role)} 
+                  options={roles} 
+                  optionLabel="lable"
+                  onChange={(e) => handleChange("role", e.target.value)}
+                  className="w-full"
+                />
               ) : (
                 <span className="field-value">{User.role}</span>
               )}
             </div>
 
-            {/* Username */}
-            <div className="field">
-              <Tag severity="info" className="field-label">
-                Usuario:
-              </Tag>
-              {isEditing ? (
-                <InputText
-                  value={User.username}
-                  onChange={(e) => handleChange("username", e.target.value)}
-                  className="editable-input"
-                />
-              ) : (
-                <span className="field-value">{User.username}</span>
-              )}
-            </div>
-
-            {/* Is Active */}
-            <div className="field">
-              <Tag
-                severity={
-                  String(User.is_active) === "true" ? "success" : "danger"
-                }
-                className="field-label"
-              >
-                Activo:
-              </Tag>
+            {/* Is Active - Full width on second row */}
+            <div className="field" style={{gridColumn: 'span 2'}}>
+              <label className="field-label">Estado</label>
               {isEditing ? (
                 <Dropdown 
                   options={bools} 
                   value={bools.find(option => option.value === User.is_active)} 
                   optionLabel="label"
                   onChange={(e) => handleChange("is_active", e.target.value.value)} 
+                  className="w-full"
                 />
               ) : (
-                <span className="field-value">{User.is_active ? "Activo" : "Inactivo"}</span>
+                <span className={User.is_active ? "status-active" : "status-inactive"}>
+                  {User.is_active ? "Activo" : "Inactivo"}
+                </span>
               )}
             </div>
           </div>

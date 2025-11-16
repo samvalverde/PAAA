@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.api.v1.routes import auth, users, health, statistics, process, audit
+from app.api.v1.routes import reports
 from app.core.config import get_settings
 from fastapi.middleware.cors import CORSMiddleware
 import os
@@ -65,7 +66,11 @@ app.include_router(
 )
 
 # ============================ REPORTS ============================
-# (Por implementar)
+app.include_router(
+    reports.router,
+    prefix="/api/v1/reports",
+    tags=["Reports"]
+)
 
 # ============================ AUDITS ============================
 

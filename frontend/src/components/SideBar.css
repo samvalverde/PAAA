@@ -5,8 +5,109 @@ ul{
 
 li{
     margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+li:hover {
+    background-color: #f8f9fa;
 }
 
 .sidebar{
-    width: 250px;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.sidebar-header {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.sidebar-header h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.username {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+}
+
+.role-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.role-badge.admin {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.role-badge.user {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.sidebar-content {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.sidebar-footer {
+    padding: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+.loading i {
+    font-size: 1.2rem;
+}
+
+/* Link styling - only within sidebar */
+.sidebar a {
+    text-decoration: none !important;
+    color: #495057 !important;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.sidebar a:hover {
+    color: #007bff !important;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 100%;
+        max-width: 280px;
+    }
 }
