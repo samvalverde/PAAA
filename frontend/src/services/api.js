@@ -12,6 +12,32 @@ function getAuthHeaders() {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
+// Reports API (backend) - returns binary PDF
+export const ReportsAPI = {
+  generatePDF: async (payload) => {
+    const token = localStorage.getItem('access_token');
+    const url = `${API_BASE_URL}/reports/pdf`;
+
+    const headers = {
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(`PDF generation failed: ${response.status} ${text}`);
+    }
+
+    return response; // caller will handle blob()
+  }
+}
+
 // ========================================
 // Authentication utility functions
 // ========================================

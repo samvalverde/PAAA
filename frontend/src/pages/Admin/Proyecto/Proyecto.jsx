@@ -13,7 +13,7 @@ import { Column } from 'primereact/column';
 import { FloatLabel } from 'primereact/floatlabel';
 import { Accordion, AccordionTab } from "primereact/accordion";
 import SideBar from '../../../components/SideBar';
-import { ProcListAPI, UserListAPI, AgentAPI } from '../../../services/api';
+import { ProcListAPI, UserListAPI, AgentAPI, ReportsAPI } from '../../../services/api';
 import auditLogger from '../../../utils/audit';
 import "./Proyecto.css";
 
@@ -64,6 +64,7 @@ const Proyecto = () => {
   const [analyticsResults, setAnalyticsResults] = useState(null);
   const [narrativeLoading, setNarrativeLoading] = useState(false);
   const [narrative, setNarrative] = useState(null);
+  const [downloadLoading, setDownloadLoading] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // Helper functions for filters
@@ -533,6 +534,54 @@ const Proyecto = () => {
       alert("Error al generar narrativa: " + error.message);
     } finally {
       setNarrativeLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!analyticsResults) {
+      alert('Primero ejecute un análisis.');
+      return;
+    }
+
+    try {
+      setDownloadLoading(true);
+
+      // Prepare payload for PDF generation
+      let payload = {};
+      // If the analysis is a detailed question (single variable), send as conjuntos
+      if (analyticsForm.tipo_analitica === 'detalle_pregunta') {
+        // conjuntos expects array of [resultado_json, analisis_str]
+        payload = {
+          conjuntos: [ [ analyticsResults, narrative || '' ] ]
+        };
+      } else {
+        payload = {
+          resultado: analyticsResults,
+          analisis: narrative || ''
+        };
+      }
+
+      // Call backend reports endpoint
+      const response = await ReportsAPI.generatePDF(payload);
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `reporte_analitica_${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      // Log audit action for PDF download
+      await auditLogger.fileDownload('reporte_analitica.pdf', projectData?.process_name, projectData?.school_id);
+
+    } catch (error) {
+      console.error('Error generating/downloading PDF:', error);
+      alert('Error al generar PDF: ' + error.message);
+    } finally {
+      setDownloadLoading(false);
     }
   };
 
@@ -1326,6 +1375,16 @@ const Proyecto = () => {
                     loading={narrativeLoading}
                     disabled={!analyticsResults}
                     className="p-button-info"
+                    style={{ marginRight: "10px" }}
+                  />
+                  <Button
+                    label="Descargar PDF"
+                    icon="pi pi-file-pdf"
+                    onClick={handleDownloadPDF}
+                    loading={downloadLoading}
+                    disabled={!analyticsResults}
+                    className="p-button-secondary"
+                    style={{ marginLeft: "10px" }}
                   />
                 </div>
               </div>
