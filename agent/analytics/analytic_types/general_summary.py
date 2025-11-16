@@ -142,23 +142,39 @@ def generate_general_summary(poblacion: Dict[str, Any],
         "total_registros": n
     }
 
-    # Pregunta de satisfacción "estrella" si existe; en tu survey ATI es ep07_18
-    sat_col = "ep07_18"
+    # Pregunta de satisfacción "estrella" si existe
+    sat_col = "ep07_18_en_general_cual_es_su_grado_de_satisfaccion_en_relacion"
     if sat_col in df.columns:
         logger.info(f"Found satisfaction column {sat_col}")
-        sat_vals = pd.to_numeric(df[sat_col], errors="coerce")
+        # Para satisfacción categórica, convertir a escala numérica
+        sat_series = df[sat_col].dropna()
+        # Mapping de respuestas categóricas a escala numérica (1-5)
+        satisfaction_mapping = {
+            "Insatisfecho (a)": 1,
+            "Algo satisfecho (a)": 2,
+            "Satisfecho (a)": 3,
+            "Muy satisfecho (a)": 4,
+            "Extremadamente satisfecho (a)": 5
+        }
+        sat_vals = sat_series.map(satisfaction_mapping)
         if sat_vals.notna().any():
-            kpis["satisfaccion_media_ep07_18"] = float(sat_vals.mean(skipna=True))
-            kpis["nps"] = float(_compute_nps(sat_vals))
+            kpis["satisfaccion_media"] = float(sat_vals.mean(skipna=True))
+            # Para NPS con escala 1-5, ajustar criterios: 1-2=detractores, 3=neutros, 4-5=promotores
+            detractores = (sat_vals <= 2).sum()
+            promotores = (sat_vals >= 4).sum()
+            total = sat_vals.notna().sum()
+            kpis["nps"] = float((promotores - detractores) * 100.0 / total) if total else 0.0
     else:
         logger.info(f"Satisfaction column {sat_col} not found in columns: {list(df.columns)}")
 
-    # 3) Tablas de composición (por ahora, posgrados si existe)
+    # 3) Tablas de composición
     tablas: Dict[str, Any] = {}
 
-    if "posgrado" in df.columns:
-        logger.info("Found posgrado column")
-        vc = df["posgrado"].value_counts(dropna=False)
+    # Tabla de posgrados usando el nombre correcto de columna
+    posgrado_col = "ig01_1_el_posgrado_que_usted_curso_es"
+    if posgrado_col in df.columns:
+        logger.info(f"Found posgrado column {posgrado_col}")
+        vc = df[posgrado_col].value_counts(dropna=False)
         total_posgrados = vc.sum()
         filas_posgrados = []
         for nombre, conteo in vc.items():
@@ -173,6 +189,23 @@ def generate_general_summary(poblacion: Dict[str, Any],
         tablas["posgrados"] = filas_posgrados
     else:
         logger.info("Posgrado column not found")
+
+    # Tabla de programa (si existe la columna programa)
+    if "programa" in df.columns:
+        logger.info("Found programa column")
+        vc = df["programa"].value_counts(dropna=False)
+        total_programas = vc.sum()
+        filas_programas = []
+        for nombre, conteo in vc.items():
+            if pd.isna(nombre):
+                nombre = "Sin especificar"
+            porcentaje = (conteo * 100.0 / total_programas) if total_programas else 0.0
+            filas_programas.append({
+                "programa": str(nombre),
+                "total": int(conteo),
+                "porcentaje": round(porcentaje, 1),
+            })
+        tablas["programas"] = filas_programas
 
     ## Aca se puede expandir mas tablas si se quiere
 

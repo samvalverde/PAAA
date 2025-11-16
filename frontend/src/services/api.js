@@ -351,19 +351,27 @@ export const AgentAPI = {
   },
 
   // Analytics endpoints
-  getAnalytics: (payload) => {
-    return fetch('http://localhost:8000/agente/resultados', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    }).then(response => {
+  getAnalytics: async (payload) => {
+    try {
+      const response = await fetch('http://localhost:8000/agente/resultados', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Analytics error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
-      return response.json();
-    });
+
+      return await response.json();
+    } catch (error) {
+      console.error('Analytics request failed:', error);
+      throw error;
+    }
   },
 
   generateNarrative: (payload) => {

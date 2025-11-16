@@ -6,6 +6,7 @@ import { Card } from 'primereact/card';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Tag } from 'primereact/tag';
 import { InputText } from 'primereact/inputtext';
+import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
@@ -55,27 +56,76 @@ const Proyecto = () => {
   const [analyticsForm, setAnalyticsForm] = useState({
     dataset: "egresados",
     tipo_analitica: "resumen_general",
-    distribuciones: [],
+    distribuciones: [], // Para resumen general y perfil poblacion
+    variable_principal: "", // Para detalle de pregunta (una sola variable)
     filtros: {}
   });
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [analyticsResults, setAnalyticsResults] = useState(null);
   const [narrativeLoading, setNarrativeLoading] = useState(false);
   const [narrative, setNarrative] = useState(null);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // Helper functions for filters
+  const handleFilterChange = (field, value) => {
+    const newFilters = { ...analyticsForm.filtros };
+    if (value && value.length > 0) {
+      newFilters[field] = value;
+    } else {
+      delete newFilters[field];
+    }
+    setAnalyticsForm({ ...analyticsForm, filtros: newFilters });
+  };
+
+  const clearFilters = () => {
+    setAnalyticsForm({ 
+      ...analyticsForm, 
+      filtros: {} 
+    });
+  };
 
   // Analytics options
   const analyticTypeOptions = [
     { label: "Resumen General", value: "resumen_general" },
-    { label: "Perfil de Población", value: "perfil_poblacion" },
     { label: "Detalle de Pregunta", value: "detalle_pregunta" },
+    { label: "Perfil de Población", value: "perfil_poblacion" },
   ];
 
   const distributionOptions = [
-    { label: "Sexo", value: "sexo" },
-    { label: "Año de Graduación", value: "anio_graduacion" },
-    { label: "Edad", value: "edad" },
-    { label: "Estado Civil", value: "estado_civil" },
+    // Información demográfica básica
+    { label: "Sexo", value: "ipg01_3_sexo" },
+    { label: "Edad", value: "ipg03_5_edad" },
+    { label: "Estado Civil", value: "ipg02_4_estado_civil" },
+    { label: "Provincia de Residencia", value: "ipg04_6_provincia_de_residencia_actual" },
+    
+    // Información académica
+    { label: "Año de Graduación", value: "ig02_2_ano_de_graduacion" },
+    { label: "Tipo de Posgrado", value: "ig01_1_el_posgrado_que_usted_curso_es" },
+    
+    // Información laboral
+    { label: "Condición Laboral Actual", value: "ipg05_7_cual_es_su_condicion_laboral_actual" },
+    
+    // Satisfacción y experiencia
+    { label: "Grado de Satisfacción General", value: "ep07_18_en_general_cual_es_su_grado_de_satisfaccion_en_relacion" },
   ];
+
+  // Filter options based on database values
+  const filterOptions = {
+    sexo: [
+      { label: "Hombre", value: "Hombre" },
+      { label: "Mujer", value: "Mujer" }
+    ],
+    estado_civil: [
+      { label: "Soltero(a)", value: "Soltero(a)" },
+      { label: "Casado(a), unión de hecho", value: "Casado(a), unión de hecho" },
+      { label: "Otro", value: "Otro" }
+    ],
+    condicion_laboral: [
+      { label: "Trabaja jornada completa", value: "Trabaja jornada completa" },
+      { label: "Trabaja medio tiempo o menos", value: "Trabaja medio tiempo o menos" },
+      { label: "No trabaja", value: "No trabaja" }
+    ]
+  };
 
   // Estado options
   const estadoOptions = [
@@ -391,6 +441,35 @@ const Proyecto = () => {
         return;
       }
 
+      // Validate required fields
+      if (!analyticsForm.dataset) {
+        alert("Debe seleccionar un dataset");
+        return;
+      }
+
+      if (!analyticsForm.tipo_analitica) {
+        alert("Debe seleccionar un tipo de análisis");
+        return;
+      }
+
+      // For detalle_pregunta, variable_principal is required
+      if (analyticsForm.tipo_analitica === "detalle_pregunta") {
+        if (!analyticsForm.variable_principal) {
+          alert("Para análisis de detalle de pregunta debe seleccionar una variable principal");
+          return;
+        }
+      }
+
+      // Prepare distribuciones based on analysis type
+      let distribuciones;
+      if (analyticsForm.tipo_analitica === "detalle_pregunta") {
+        // Para detalle_pregunta, enviar la variable principal como array de un elemento
+        distribuciones = [analyticsForm.variable_principal];
+      } else {
+        // Para otros tipos, usar las distribuciones seleccionadas
+        distribuciones = analyticsForm.distribuciones || [];
+      }
+
       // Prepare payload for analytics
       const payload = {
         poblacion: {
@@ -398,11 +477,14 @@ const Proyecto = () => {
           programa: programa,
           filtros: analyticsForm.filtros,
         },
-        distribuciones: analyticsForm.distribuciones,
+        distribuciones: distribuciones,
         tipo_analitica: analyticsForm.tipo_analitica
       };
 
       console.log("Running analytics with payload:", payload);
+      console.log("DEBUG - analyticsForm state:", analyticsForm);
+      console.log("DEBUG - distribuciones value:", distribuciones);
+      console.log("DEBUG - distribuciones type:", typeof distribuciones);
 
       // Call analytics API
       const results = await AgentAPI.getAnalytics(payload);
@@ -991,9 +1073,15 @@ const Proyecto = () => {
                   <Dropdown
                     id="analytic-type"
                     value={analyticsForm.tipo_analitica}
-                    onChange={(e) =>
-                      setAnalyticsForm({ ...analyticsForm, tipo_analitica: e.value })
-                    }
+                    onChange={(e) => {
+                      // Limpiar variables dependientes cuando cambia el tipo
+                      setAnalyticsForm({ 
+                        ...analyticsForm, 
+                        tipo_analitica: e.value,
+                        distribuciones: [],
+                        variable_principal: ""
+                      });
+                    }}
                     options={analyticTypeOptions}
                     placeholder="Seleccionar tipo"
                     className="input-field"
@@ -1001,22 +1089,225 @@ const Proyecto = () => {
                   />
                 </div>
 
+                {/* Variable Selection based on Analysis Type */}
+                {analyticsForm.tipo_analitica === "detalle_pregunta" ? (
+                  <div className="form-group" style={{ marginTop: "20px" }}>
+                    <label htmlFor="variable_principal" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
+                      Variable a Analizar *
+                    </label>
+                    <small style={{ color: "#666", fontSize: "12px", display: "block", marginBottom: "5px" }}>
+                      Seleccione UNA variable para análisis detallado
+                    </small>
+                    <Dropdown
+                      id="variable_principal"
+                      value={analyticsForm.variable_principal}
+                      onChange={(e) =>
+                        setAnalyticsForm({ ...analyticsForm, variable_principal: e.value })
+                      }
+                      options={distributionOptions}
+                      placeholder="Seleccionar variable principal"
+                      className="input-field"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                ) : (
+                  <div className="form-group" style={{ marginTop: "20px" }}>
+                    <label htmlFor="distributions" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
+                      Variables Adicionales (Opcional)
+                    </label>
+                    <small style={{ color: "#666", fontSize: "12px", display: "block", marginBottom: "5px" }}>
+                      Para resumen general: deje vacío para KPIs básicos, o seleccione variables para ver distribuciones específicas
+                    </small>
+                    <Dropdown
+                      id="distributions"
+                      value={analyticsForm.distribuciones}
+                      onChange={(e) => {
+                        console.log("Distribuciones onChange:", e.value);
+                        setAnalyticsForm({ ...analyticsForm, distribuciones: Array.isArray(e.value) ? e.value : (e.value ? [e.value] : []) })
+                      }}
+                      options={distributionOptions}
+                      placeholder="Sin variables adicionales"
+                      className="input-field"
+                      style={{ width: "100%" }}
+                      multiple
+                      showClear
+                    />
+                  </div>
+                )}
+
+                {/* Advanced Filters Section */}
                 <div className="form-group" style={{ marginTop: "20px" }}>
-                  <label htmlFor="distributions" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
-                    Distribuciones (Opcional)
-                  </label>
-                  <Dropdown
-                    id="distributions"
-                    value={analyticsForm.distribuciones}
-                    onChange={(e) =>
-                      setAnalyticsForm({ ...analyticsForm, distribuciones: e.value })
-                    }
-                    options={distributionOptions}
-                    placeholder="Seleccionar distribuciones"
-                    className="input-field"
-                    style={{ width: "100%" }}
-                    multiple
-                  />
+                  <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+                    <label style={{ fontWeight: "bold", marginRight: "10px" }}>
+                      Filtros Avanzados (Opcional)
+                    </label>
+                    {Object.keys(analyticsForm.filtros).length > 0 && (
+                      <span 
+                        style={{ 
+                          backgroundColor: "#007bff", 
+                          color: "white", 
+                          padding: "2px 8px", 
+                          borderRadius: "12px", 
+                          fontSize: "11px",
+                          marginRight: "10px"
+                        }}
+                      >
+                        {Object.keys(analyticsForm.filtros).length} filtro{Object.keys(analyticsForm.filtros).length > 1 ? 's' : ''} activo{Object.keys(analyticsForm.filtros).length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <Button
+                      icon={showAdvancedFilters ? "pi pi-chevron-up" : "pi pi-chevron-down"}
+                      onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                      className="p-button-text p-button-sm"
+                      style={{ padding: "0.25rem" }}
+                    />
+                  </div>
+                  
+                  {!showAdvancedFilters && Object.keys(analyticsForm.filtros).length > 0 && (
+                    <div style={{ 
+                      fontSize: "12px", 
+                      color: "#666", 
+                      backgroundColor: "#f0f8ff", 
+                      padding: "8px", 
+                      borderRadius: "4px",
+                      marginBottom: "10px"
+                    }}>
+                      <strong>Filtros activos:</strong> {Object.entries(analyticsForm.filtros).map(([key, value]) => {
+                        let label = key.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+                        if (key === 'ipg01_3_sexo') label = 'Sexo';
+                        if (key === 'ipg02_4_estado_civil') label = 'Estado Civil';
+                        if (key === 'ipg05_7_cual_es_su_condicion_laboral_actual') label = 'Condición Laboral';
+                        if (key === 'ig02_2_ano_de_graduacion') label = 'Años de Graduación';
+                        
+                        if (key === 'ig02_2_ano_de_graduacion') {
+                          return `${label}: ${value.gte || '...'} - ${value.lte || '...'}`;
+                        } else {
+                          return `${label}: ${Array.isArray(value) ? value.join(', ') : value}`;
+                        }
+                      }).join(' | ')}
+                    </div>
+                  )}
+                  
+                  {showAdvancedFilters && (
+                    <div style={{ border: "1px solid #ddd", padding: "15px", borderRadius: "8px", backgroundColor: "#f9f9f9" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                        <small style={{ color: "#666" }}>
+                          Filtre la población para análisis más específicos
+                        </small>
+                        <Button
+                          label="Limpiar Filtros"
+                          onClick={clearFilters}
+                          className="p-button-text p-button-sm"
+                          style={{ padding: "0.25rem 0.5rem" }}
+                        />
+                      </div>
+
+                      {/* Year Range Filter */}
+                      <div style={{ marginBottom: "15px" }}>
+                        <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                          Rango de Años de Graduación:
+                        </label>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                          <InputNumber
+                            placeholder="Desde"
+                            value={analyticsForm.filtros['ig02_2_ano_de_graduacion']?.gte}
+                            onValueChange={(e) => {
+                              const newFilters = { ...analyticsForm.filtros };
+                              if (!newFilters['ig02_2_ano_de_graduacion']) {
+                                newFilters['ig02_2_ano_de_graduacion'] = {};
+                              }
+                              if (e.value) {
+                                newFilters['ig02_2_ano_de_graduacion'].gte = e.value;
+                              } else {
+                                delete newFilters['ig02_2_ano_de_graduacion'].gte;
+                                if (Object.keys(newFilters['ig02_2_ano_de_graduacion']).length === 0) {
+                                  delete newFilters['ig02_2_ano_de_graduacion'];
+                                }
+                              }
+                              setAnalyticsForm({ ...analyticsForm, filtros: newFilters });
+                            }}
+                            min={2000}
+                            max={2025}
+                            style={{ width: "120px" }}
+                          />
+                          <span>a</span>
+                          <InputNumber
+                            placeholder="Hasta"
+                            value={analyticsForm.filtros['ig02_2_ano_de_graduacion']?.lte}
+                            onValueChange={(e) => {
+                              const newFilters = { ...analyticsForm.filtros };
+                              if (!newFilters['ig02_2_ano_de_graduacion']) {
+                                newFilters['ig02_2_ano_de_graduacion'] = {};
+                              }
+                              if (e.value) {
+                                newFilters['ig02_2_ano_de_graduacion'].lte = e.value;
+                              } else {
+                                delete newFilters['ig02_2_ano_de_graduacion'].lte;
+                                if (Object.keys(newFilters['ig02_2_ano_de_graduacion']).length === 0) {
+                                  delete newFilters['ig02_2_ano_de_graduacion'];
+                                }
+                              }
+                              setAnalyticsForm({ ...analyticsForm, filtros: newFilters });
+                            }}
+                            min={2000}
+                            max={2025}
+                            style={{ width: "120px" }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sex Filter */}
+                      <div style={{ marginBottom: "15px" }}>
+                        <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                          Sexo:
+                        </label>
+                        <Dropdown
+                          value={analyticsForm.filtros['ipg01_3_sexo']}
+                          onChange={(e) => handleFilterChange('ipg01_3_sexo', e.value)}
+                          options={filterOptions.sexo}
+                          placeholder="Todos"
+                          className="input-field"
+                          style={{ width: "200px" }}
+                          multiple
+                          showClear
+                        />
+                      </div>
+
+                      {/* Estado Civil Filter */}
+                      <div style={{ marginBottom: "15px" }}>
+                        <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                          Estado Civil:
+                        </label>
+                        <Dropdown
+                          value={analyticsForm.filtros['ipg02_4_estado_civil']}
+                          onChange={(e) => handleFilterChange('ipg02_4_estado_civil', e.value)}
+                          options={filterOptions.estado_civil}
+                          placeholder="Todos"
+                          className="input-field"
+                          style={{ width: "250px" }}
+                          multiple
+                          showClear
+                        />
+                      </div>
+
+                      {/* Condición Laboral Filter */}
+                      <div style={{ marginBottom: "10px" }}>
+                        <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                          Condición Laboral:
+                        </label>
+                        <Dropdown
+                          value={analyticsForm.filtros['ipg05_7_cual_es_su_condicion_laboral_actual']}
+                          onChange={(e) => handleFilterChange('ipg05_7_cual_es_su_condicion_laboral_actual', e.value)}
+                          options={filterOptions.condicion_laboral}
+                          placeholder="Todos"
+                          className="input-field"
+                          style={{ width: "250px" }}
+                          multiple
+                          showClear
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ marginTop: "30px", textAlign: "center" }}>

@@ -244,11 +244,28 @@ def agente_resultados(payload: dict):
 
     """
     try:
+        # Debug logging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Received payload: {payload}")
+        
         poblacion = payload.get("poblacion")
         if not poblacion:
             raise HTTPException(status_code=400, detail="Falta 'poblacion' en el body")
 
         distribuciones = payload.get("distribuciones") or []
+        logger.warning(f"Distribuciones parsed: {distribuciones}, type: {type(distribuciones)}")
+        
+        # CRITICAL FIX: Ensure distribuciones is always a list
+        if isinstance(distribuciones, str):
+            logger.warning(f"WARNING: distribuciones came as string '{distribuciones}', converting to list")
+            distribuciones = [distribuciones]
+        elif not isinstance(distribuciones, list):
+            logger.warning(f"WARNING: distribuciones came as {type(distribuciones)}, converting to empty list")
+            distribuciones = []
+            
+        logger.warning(f"Final distribuciones: {distribuciones}")
+        
         tipo_analitica = payload.get("tipo_analitica")
 
         resultados = generate_results(poblacion, distribuciones, tipo_analitica)
