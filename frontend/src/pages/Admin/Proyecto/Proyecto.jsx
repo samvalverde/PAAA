@@ -13,7 +13,7 @@ import { Column } from 'primereact/column';
 import { FloatLabel } from 'primereact/floatlabel';
 import { Accordion, AccordionTab } from "primereact/accordion";
 import SideBar from '../../../components/SideBar';
-import { ProcListAPI, UserListAPI, AgentAPI, ReportsAPI } from '../../../services/api';
+import { ProcListAPI, UserListAPI, AgentAPI, ReportsAPI, statisticsAPI } from '../../../services/api';
 import auditLogger from '../../../utils/audit';
 import "./Proyecto.css";
 
@@ -65,6 +65,10 @@ const Proyecto = () => {
   const [narrative, setNarrative] = useState(null);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Dynamic questions state for "detalle de pregunta"
+  const [availableQuestions, setAvailableQuestions] = useState([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
 
   // Helper functions for filters
   const handleFilterChange = (field, value) => {
@@ -169,6 +173,20 @@ const Proyecto = () => {
     }
   }, [projectData]);
 
+  // Load available questions when analysis type is "detalle_pregunta" or dataset changes
+  useEffect(() => {
+    if (analyticsForm.tipo_analitica === "detalle_pregunta" && analyticsForm.dataset) {
+      loadAvailableQuestions(analyticsForm.dataset);
+    } else {
+      // Clear questions if not detalle_pregunta
+      setAvailableQuestions([]);
+      // Also clear variable_principal if switching away from detalle_pregunta
+      if (analyticsForm.variable_principal) {
+        setAnalyticsForm(prev => ({ ...prev, variable_principal: "" }));
+      }
+    }
+  }, [analyticsForm.tipo_analitica, analyticsForm.dataset]);
+
   const fetchProjectData = async (processId) => {
     try {
       setLoading(true);
@@ -211,6 +229,33 @@ const Proyecto = () => {
       setFilesError('Error al cargar los archivos');
     } finally {
       setFilesLoading(false);
+    }
+  };
+
+  // Load available questions for "detalle de pregunta" analysis
+  const loadAvailableQuestions = async (dataset) => {
+    if (!dataset) return;
+    
+    try {
+      setQuestionsLoading(true);
+      const response = await statisticsAPI.getAvailableColumns(dataset);
+      console.log('Available questions loaded:', response);
+      
+      // Filter only question columns (exclude metadata columns and skip first 3 columns)
+      const questionOptions = response.columns
+        .slice(5) // Skip the first 3 columns
+        .filter(col => col.is_question) // Only actual survey questions
+        .map(col => ({
+          label: col.column_name.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()),
+          value: col.column_name
+        }));
+      
+      setAvailableQuestions(questionOptions);
+    } catch (err) {
+      console.error('Error loading available questions:', err);
+      setAvailableQuestions([]);
+    } finally {
+      setQuestionsLoading(false);
     }
   };
 
@@ -1116,7 +1161,7 @@ const Proyecto = () => {
                       Variable a Analizar *
                     </label>
                     <small style={{ color: "#666", fontSize: "12px", display: "block", marginBottom: "5px" }}>
-                      Seleccione UNA variable para análisis detallado
+                      Seleccione UNA pregunta de la encuesta cargada para análisis detallado
                     </small>
                     <Dropdown
                       id="variable_principal"
@@ -1124,11 +1169,23 @@ const Proyecto = () => {
                       onChange={(e) =>
                         setAnalyticsForm({ ...analyticsForm, variable_principal: e.value })
                       }
-                      options={distributionOptions}
-                      placeholder="Seleccionar variable principal"
+                      options={availableQuestions}
+                      placeholder={questionsLoading ? "Cargando preguntas..." : "Seleccionar pregunta"}
+                      disabled={questionsLoading || availableQuestions.length === 0}
                       className="input-field"
                       style={{ width: "100%" }}
                     />
+                    {questionsLoading && (
+                      <small style={{ color: "#666", fontSize: "11px", display: "block", marginTop: "3px" }}>
+                        <i className="pi pi-spin pi-spinner" style={{ marginRight: "5px" }}></i>
+                        Cargando preguntas disponibles...
+                      </small>
+                    )}
+                    {!questionsLoading && availableQuestions.length === 0 && analyticsForm.dataset && (
+                      <small style={{ color: "#e74c3c", fontSize: "11px", display: "block", marginTop: "3px" }}>
+                        No se encontraron preguntas para el dataset seleccionado
+                      </small>
+                    )}
                   </div>
                 ) : (
                   <div className="form-group" style={{ marginTop: "20px" }}>
