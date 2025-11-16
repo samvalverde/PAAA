@@ -4,10 +4,31 @@ from sqlalchemy import text
 from datetime import datetime
 from app.core.database import get_db_users
 from app.models.user import User
+from app.models.audit import AuditLog
+from app.models.actions import ActionType
 from app.schemas.user import UserCreate, UserOut, UserUpdate
 from app.core.security import get_password_hash, get_current_user
 
 router = APIRouter(tags=["Users"])
+
+
+def _log_audit_action(db: Session, action_name: str, description: str, user_id: int, school_id: int = None):
+    """Helper function to log audit actions"""
+    try:
+        action_type = db.query(ActionType).filter(ActionType.name == action_name).first()
+        if action_type:
+            audit_log = AuditLog(
+                user_id=user_id,
+                action_type_id=action_type.id,
+                school_id=school_id,
+                description=description
+            )
+            db.add(audit_log)
+            db.commit()
+    except Exception as e:
+        # Don't break main flow if audit logging fails
+        print(f"Audit logging failed: {e}")
+
 
 def get_user_with_role(db: Session, user_id: int = None, email: str = None):
     """Helper function to get user with role using raw SQL"""
@@ -60,6 +81,15 @@ def create_user(user: UserCreate, db: Session = Depends(get_db_users), current_u
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    # Log audit action for user creation
+    _log_audit_action(
+        db=db,
+        action_name="Create",
+        description=f"User created: {new_user.username} ({new_user.email})",
+        user_id=current_user.id,  # who created the user
+        school_id=new_user.school_id
+    )
     
     # Get the created user with role using raw SQL
     result = db.execute(text("""
@@ -187,6 +217,15 @@ def update_user(
     
     db.commit()
     db.refresh(existing_user)
+    
+    # Log audit action for user update
+    _log_audit_action(
+        db=db,
+        action_name="Update",
+        description=f"User updated: {existing_user.username} ({existing_user.email})",
+        user_id=current_user.id,  # who updated the user
+        school_id=existing_user.school_id
+    )
     
     # Return the updated user with role using our helper function
     updated_user = get_user_with_role(db, user_id=user_id)

@@ -423,3 +423,113 @@ label {
   gap: 0.5rem;
   justify-content: center;
 }
+
+/* Analytics tab specific styles */
+.analytics-content {
+  width: 100%;
+}
+
+.analytics-accordion {
+  width: 100%;
+}
+
+.analytics-tab {
+  width: 100%;
+}
+
+.analytics-config-card {
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.analytics-form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.analytics-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.analytics-form .input-field {
+  width: 100%;
+}
+
+.analytics-results {
+  padding: 1rem 0;
+}
+
+.population-info {
+  background: #e3f2fd;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.population-info h5 {
+  color: #1976d2;
+  margin-bottom: 0.5rem;
+}
+
+.kpis-section {
+  margin-bottom: 2rem;
+}
+
+.kpis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.kpi-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.kpi-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.9;
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.distributions-section,
+.tables-section {
+  margin-bottom: 2rem;
+}
+
+.distribution-card,
+.table-card {
+  margin-bottom: 1.5rem;
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.distribution-card h6,
+.table-card h6 {
+  color: #495057;
+  margin-bottom: 1rem;
+}
+
+.narrative-content {
+  margin-top: 1rem;
+}
+
+.no-results-message {
+  text-align: center;
+  padding: 3rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  color: #6c757d;
+}

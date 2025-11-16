@@ -6,13 +6,15 @@ import { Card } from 'primereact/card';
 import { ProgressSpinner } from 'primereact/progressspinner';
 import { Tag } from 'primereact/tag';
 import { InputText } from 'primereact/inputtext';
+import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { FloatLabel } from 'primereact/floatlabel';
 import { Accordion, AccordionTab } from "primereact/accordion";
 import SideBar from '../../../components/SideBar';
-import { ProcListAPI, UserListAPI } from '../../../services/api';
+import { ProcListAPI, UserListAPI, AgentAPI } from '../../../services/api';
+import auditLogger from '../../../utils/audit';
 import "./Proyecto.css";
 
 const Proyecto = () => {
@@ -49,6 +51,81 @@ const Proyecto = () => {
     { label: "Egresados", value: "egresados" },
     { label: "Profesores", value: "profesores" },
   ];
+
+  // Analytics state
+  const [analyticsForm, setAnalyticsForm] = useState({
+    dataset: "egresados",
+    tipo_analitica: "resumen_general",
+    distribuciones: [], // Para resumen general y perfil poblacion
+    variable_principal: "", // Para detalle de pregunta (una sola variable)
+    filtros: {}
+  });
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsResults, setAnalyticsResults] = useState(null);
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
+  const [narrative, setNarrative] = useState(null);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // Helper functions for filters
+  const handleFilterChange = (field, value) => {
+    const newFilters = { ...analyticsForm.filtros };
+    if (value && value.length > 0) {
+      newFilters[field] = value;
+    } else {
+      delete newFilters[field];
+    }
+    setAnalyticsForm({ ...analyticsForm, filtros: newFilters });
+  };
+
+  const clearFilters = () => {
+    setAnalyticsForm({ 
+      ...analyticsForm, 
+      filtros: {} 
+    });
+  };
+
+  // Analytics options
+  const analyticTypeOptions = [
+    { label: "Resumen General", value: "resumen_general" },
+    { label: "Detalle de Pregunta", value: "detalle_pregunta" },
+    { label: "Perfil de Población", value: "perfil_poblacion" },
+  ];
+
+  const distributionOptions = [
+    // Información demográfica básica
+    { label: "Sexo", value: "ipg01_3_sexo" },
+    { label: "Edad", value: "ipg03_5_edad" },
+    { label: "Estado Civil", value: "ipg02_4_estado_civil" },
+    { label: "Provincia de Residencia", value: "ipg04_6_provincia_de_residencia_actual" },
+    
+    // Información académica
+    { label: "Año de Graduación", value: "ig02_2_ano_de_graduacion" },
+    { label: "Tipo de Posgrado", value: "ig01_1_el_posgrado_que_usted_curso_es" },
+    
+    // Información laboral
+    { label: "Condición Laboral Actual", value: "ipg05_7_cual_es_su_condicion_laboral_actual" },
+    
+    // Satisfacción y experiencia
+    { label: "Grado de Satisfacción General", value: "ep07_18_en_general_cual_es_su_grado_de_satisfaccion_en_relacion" },
+  ];
+
+  // Filter options based on database values
+  const filterOptions = {
+    sexo: [
+      { label: "Hombre", value: "Hombre" },
+      { label: "Mujer", value: "Mujer" }
+    ],
+    estado_civil: [
+      { label: "Soltero(a)", value: "Soltero(a)" },
+      { label: "Casado(a), unión de hecho", value: "Casado(a), unión de hecho" },
+      { label: "Otro", value: "Otro" }
+    ],
+    condicion_laboral: [
+      { label: "Trabaja jornada completa", value: "Trabaja jornada completa" },
+      { label: "Trabaja medio tiempo o menos", value: "Trabaja medio tiempo o menos" },
+      { label: "No trabaja", value: "No trabaja" }
+    ]
+  };
 
   // Estado options
   const estadoOptions = [
@@ -98,6 +175,10 @@ const Proyecto = () => {
       setError(null);
       const data = await ProcListAPI.getProcById(processId);
       setProjectData(data);
+      
+      // Log audit action for viewing project
+      await auditLogger.projectView(data.process_name, data.school_id);
+      
     } catch (err) {
       console.error('Error fetching project data:', err);
       setError('Error al cargar los datos del proyecto');
@@ -192,6 +273,9 @@ const Proyecto = () => {
       
       console.log("Project updated successfully:", updatedProject);
       
+      // Log audit action for project update
+      await auditLogger.projectUpdate(updatedProject.process_name, updatedProject.school_id);
+      
       // Show success message (you can use a toast library for better UX)
       alert("Proyecto actualizado correctamente");
       
@@ -224,6 +308,9 @@ const Proyecto = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+      
+      // Log audit action for file download
+      await auditLogger.fileDownload(fileData.name, projectData?.process_name, projectData?.school_id);
       
     } catch (error) {
       console.error('Error downloading file:', error);
@@ -291,11 +378,9 @@ const Proyecto = () => {
         return;
       }
 
-      // Create FormData for file upload
+      // Create FormData for file upload (simplified for file-only upload)
       const formData = new FormData();
-      formData.append("process_name", `Upload_${schoolName}_${uploadForm.dataset_type}_${uploadForm.version}`);
-      formData.append("school_id", projectData.school_id.toString());
-      formData.append("career_name", schoolName); // Use school name for MinIO path
+      formData.append("school_name", schoolName); // Use school name for MinIO path
       formData.append("dataset_type", uploadForm.dataset_type);
       formData.append("file", uploadForm.file);
 
@@ -309,8 +394,8 @@ const Proyecto = () => {
         return;
       }
 
-      // Call the API to upload the file
-      await ProcListAPI.createProc(formData);
+      // Call the new API to upload the file only (without creating a process)
+      await ProcListAPI.uploadFile(formData);
 
       // Reset the form
       setUploadForm({
@@ -326,6 +411,9 @@ const Proyecto = () => {
 
       alert("Archivo subido correctamente");
       
+      // Log audit action for file upload
+      await auditLogger.fileUpload(uploadForm.file.name, projectData?.process_name, projectData?.school_id);
+      
       // Reload files to show the new upload
       if (projectData?.id) {
         loadFiles(projectData.id);
@@ -336,6 +424,115 @@ const Proyecto = () => {
       alert("Error al subir archivo: " + error.message);
     } finally {
       setUploadLoading(false);
+    }
+  };
+
+  // Analytics functions
+  const handleRunAnalytics = async () => {
+    try {
+      setAnalyticsLoading(true);
+      setAnalyticsResults(null);
+      setNarrative(null);
+
+      // Get school name (programa) from project data
+      const programa = projectData?.unidad;
+      if (!programa) {
+        alert("No se puede determinar la escuela del proyecto");
+        return;
+      }
+
+      // Validate required fields
+      if (!analyticsForm.dataset) {
+        alert("Debe seleccionar un dataset");
+        return;
+      }
+
+      if (!analyticsForm.tipo_analitica) {
+        alert("Debe seleccionar un tipo de análisis");
+        return;
+      }
+
+      // For detalle_pregunta, variable_principal is required
+      if (analyticsForm.tipo_analitica === "detalle_pregunta") {
+        if (!analyticsForm.variable_principal) {
+          alert("Para análisis de detalle de pregunta debe seleccionar una variable principal");
+          return;
+        }
+      }
+
+      // Prepare distribuciones based on analysis type
+      let distribuciones;
+      if (analyticsForm.tipo_analitica === "detalle_pregunta") {
+        // Para detalle_pregunta, enviar la variable principal como array de un elemento
+        distribuciones = [analyticsForm.variable_principal];
+      } else {
+        // Para otros tipos, usar las distribuciones seleccionadas
+        distribuciones = analyticsForm.distribuciones || [];
+      }
+
+      // Prepare payload for analytics
+      const payload = {
+        poblacion: {
+          dataset: analyticsForm.dataset,
+          programa: programa,
+          filtros: analyticsForm.filtros,
+        },
+        distribuciones: distribuciones,
+        tipo_analitica: analyticsForm.tipo_analitica
+      };
+
+      console.log("Running analytics with payload:", payload);
+      console.log("DEBUG - analyticsForm state:", analyticsForm);
+      console.log("DEBUG - distribuciones value:", distribuciones);
+      console.log("DEBUG - distribuciones type:", typeof distribuciones);
+
+      // Call analytics API
+      const results = await AgentAPI.getAnalytics(payload);
+      setAnalyticsResults(results);
+
+      console.log("Analytics results:", results);
+
+      // Log audit action
+      await auditLogger.analyticsRun(analyticsForm.tipo_analitica, analyticsForm.dataset, projectData?.school_id);
+
+    } catch (error) {
+      console.error("Error running analytics:", error);
+      alert("Error al ejecutar análisis: " + error.message);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  const handleGenerateNarrative = async () => {
+    if (!analyticsResults) {
+      alert("Primero ejecute un análisis para generar la narrativa");
+      return;
+    }
+
+    try {
+      setNarrativeLoading(true);
+      setNarrative(null);
+
+      const programa = projectData?.unidad;
+      const payload = {
+        enunciado: `Generar un reporte analítico para ${programa}`,
+        resultados: analyticsResults.resultados,
+        poblacion: analyticsResults.poblacion,
+        escuela: programa
+      };
+
+      console.log("Generating narrative with payload:", payload);
+
+      const narrativeResult = await AgentAPI.generateNarrative(payload);
+      setNarrative(narrativeResult.texto);
+
+      console.log("Narrative result:", narrativeResult);
+
+    } catch (error) {
+      console.error("Error generating narrative:", error);
+      alert("Error al generar narrativa: " + error.message);
+    } finally {
+      setNarrativeLoading(false);
     }
   };
 
@@ -744,6 +941,423 @@ const Proyecto = () => {
     );
   };
 
+  const analyticsContent = () => {
+    const renderAnalyticsResults = () => {
+      if (!analyticsResults) return null;
+
+      const { poblacion, resultados } = analyticsResults;
+
+      return (
+        <Card style={{ marginTop: '1rem' }}>
+          <h4>Resultados del Análisis</h4>
+          <div className="analytics-results">
+            <div className="population-info">
+              <h5>Información de la Población</h5>
+              <p><strong>Dataset:</strong> {poblacion.dataset}</p>
+              <p><strong>Programa:</strong> {poblacion.programa}</p>
+              {poblacion.n && <p><strong>Tamaño de muestra:</strong> {poblacion.n}</p>}
+            </div>
+
+            {resultados.kpis && (
+              <div className="kpis-section">
+                <h5>KPIs</h5>
+                <div className="kpis-grid">
+                  {Object.entries(resultados.kpis).map(([key, value]) => (
+                    <div key={key} className="kpi-card">
+                      <div className="kpi-label">{key.replace(/_/g, ' ').toUpperCase()}</div>
+                      <div className="kpi-value">{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {resultados.distribuciones && (
+              <div className="distributions-section">
+                <h5>Distribuciones</h5>
+                {Object.entries(resultados.distribuciones).map(([key, distribution]) => (
+                  <div key={key} className="distribution-card">
+                    <h6>{key.replace(/_/g, ' ').toUpperCase()}</h6>
+                    <DataTable 
+                      value={Object.entries(distribution).map(([k, v]) => ({ categoria: k, valor: v }))}
+                      size="small"
+                    >
+                      <Column field="categoria" header="Categoría" />
+                      <Column field="valor" header="Valor" />
+                    </DataTable>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {resultados.tablas && (
+              <div className="tables-section">
+                <h5>Tablas</h5>
+                {Object.entries(resultados.tablas).map(([key, table]) => (
+                  <div key={key} className="table-card">
+                    <h6>{key.replace(/_/g, ' ').toUpperCase()}</h6>
+                    <DataTable 
+                      value={table}
+                      size="small"
+                      scrollable
+                      scrollHeight="300px"
+                    >
+                      {table.length > 0 && Object.keys(table[0]).map(col => (
+                        <Column key={col} field={col} header={col.replace(/_/g, ' ').toUpperCase()} />
+                      ))}
+                    </DataTable>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      );
+    };
+
+    const renderNarrative = () => {
+      if (!narrative) return null;
+
+      return (
+        <Card style={{ marginTop: '1rem' }}>
+          <h4>Narrativa Generada</h4>
+          <div className="narrative-content">
+            {narrative ? (
+              <div style={{ 
+                padding: '1rem', 
+                backgroundColor: '#f8f9fa', 
+                borderRadius: '8px',
+                lineHeight: '1.6'
+              }}>
+                {narrative}
+              </div>
+            ) : (
+              <p>No hay narrativa disponible. La funcionalidad de narrativa requiere configuración adicional.</p>
+            )}
+          </div>
+        </Card>
+      );
+    };
+
+    return (
+      <div className="analytics-content">
+        <Accordion multiple activeIndex={[0]} className="analytics-accordion">
+          {/* Analytics Configuration */}
+          <AccordionTab header="Configurar Análisis" className="analytics-tab">
+            <Card className="analytics-config-card">
+              <h4>Configuración del Análisis</h4>
+              <p>Configure los parámetros para analizar los datos de {projectData?.unidad || 'esta escuela'}</p>
+              
+              <div className="analytics-form">
+                <div className="form-group">
+                  <label htmlFor="analytics-dataset" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
+                    Dataset *
+                  </label>
+                  <Dropdown
+                    id="analytics-dataset"
+                    value={analyticsForm.dataset}
+                    onChange={(e) =>
+                      setAnalyticsForm({ ...analyticsForm, dataset: e.value })
+                    }
+                    options={datasetOptions}
+                    placeholder="Seleccionar dataset"
+                    className="input-field"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginTop: "20px" }}>
+                  <label htmlFor="analytic-type" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
+                    Tipo de Análisis *
+                  </label>
+                  <Dropdown
+                    id="analytic-type"
+                    value={analyticsForm.tipo_analitica}
+                    onChange={(e) => {
+                      // Limpiar variables dependientes cuando cambia el tipo
+                      setAnalyticsForm({ 
+                        ...analyticsForm, 
+                        tipo_analitica: e.value,
+                        distribuciones: [],
+                        variable_principal: ""
+                      });
+                    }}
+                    options={analyticTypeOptions}
+                    placeholder="Seleccionar tipo"
+                    className="input-field"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
+                {/* Variable Selection based on Analysis Type */}
+                {analyticsForm.tipo_analitica === "detalle_pregunta" ? (
+                  <div className="form-group" style={{ marginTop: "20px" }}>
+                    <label htmlFor="variable_principal" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
+                      Variable a Analizar *
+                    </label>
+                    <small style={{ color: "#666", fontSize: "12px", display: "block", marginBottom: "5px" }}>
+                      Seleccione UNA variable para análisis detallado
+                    </small>
+                    <Dropdown
+                      id="variable_principal"
+                      value={analyticsForm.variable_principal}
+                      onChange={(e) =>
+                        setAnalyticsForm({ ...analyticsForm, variable_principal: e.value })
+                      }
+                      options={distributionOptions}
+                      placeholder="Seleccionar variable principal"
+                      className="input-field"
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                ) : (
+                  <div className="form-group" style={{ marginTop: "20px" }}>
+                    <label htmlFor="distributions" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
+                      Variables Adicionales (Opcional)
+                    </label>
+                    <small style={{ color: "#666", fontSize: "12px", display: "block", marginBottom: "5px" }}>
+                      Para resumen general: deje vacío para KPIs básicos, o seleccione variables para ver distribuciones específicas
+                    </small>
+                    <Dropdown
+                      id="distributions"
+                      value={analyticsForm.distribuciones}
+                      onChange={(e) => {
+                        console.log("Distribuciones onChange:", e.value);
+                        setAnalyticsForm({ ...analyticsForm, distribuciones: Array.isArray(e.value) ? e.value : (e.value ? [e.value] : []) })
+                      }}
+                      options={distributionOptions}
+                      placeholder="Sin variables adicionales"
+                      className="input-field"
+                      style={{ width: "100%" }}
+                      multiple
+                      showClear
+                    />
+                  </div>
+                )}
+
+                {/* Advanced Filters Section */}
+                <div className="form-group" style={{ marginTop: "20px" }}>
+                  <div style={{ display: "flex", alignItems: "center", marginBottom: "10px" }}>
+                    <label style={{ fontWeight: "bold", marginRight: "10px" }}>
+                      Filtros Avanzados (Opcional)
+                    </label>
+                    {Object.keys(analyticsForm.filtros).length > 0 && (
+                      <span 
+                        style={{ 
+                          backgroundColor: "#007bff", 
+                          color: "white", 
+                          padding: "2px 8px", 
+                          borderRadius: "12px", 
+                          fontSize: "11px",
+                          marginRight: "10px"
+                        }}
+                      >
+                        {Object.keys(analyticsForm.filtros).length} filtro{Object.keys(analyticsForm.filtros).length > 1 ? 's' : ''} activo{Object.keys(analyticsForm.filtros).length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <Button
+                      icon={showAdvancedFilters ? "pi pi-chevron-up" : "pi pi-chevron-down"}
+                      onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                      className="p-button-text p-button-sm"
+                      style={{ padding: "0.25rem" }}
+                    />
+                  </div>
+                  
+                  {!showAdvancedFilters && Object.keys(analyticsForm.filtros).length > 0 && (
+                    <div style={{ 
+                      fontSize: "12px", 
+                      color: "#666", 
+                      backgroundColor: "#f0f8ff", 
+                      padding: "8px", 
+                      borderRadius: "4px",
+                      marginBottom: "10px"
+                    }}>
+                      <strong>Filtros activos:</strong> {Object.entries(analyticsForm.filtros).map(([key, value]) => {
+                        let label = key.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+                        if (key === 'ipg01_3_sexo') label = 'Sexo';
+                        if (key === 'ipg02_4_estado_civil') label = 'Estado Civil';
+                        if (key === 'ipg05_7_cual_es_su_condicion_laboral_actual') label = 'Condición Laboral';
+                        if (key === 'ig02_2_ano_de_graduacion') label = 'Años de Graduación';
+                        
+                        if (key === 'ig02_2_ano_de_graduacion') {
+                          return `${label}: ${value.gte || '...'} - ${value.lte || '...'}`;
+                        } else {
+                          return `${label}: ${Array.isArray(value) ? value.join(', ') : value}`;
+                        }
+                      }).join(' | ')}
+                    </div>
+                  )}
+                  
+                  {showAdvancedFilters && (
+                    <div style={{ border: "1px solid #ddd", padding: "15px", borderRadius: "8px", backgroundColor: "#f9f9f9" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                        <small style={{ color: "#666" }}>
+                          Filtre la población para análisis más específicos
+                        </small>
+                        <Button
+                          label="Limpiar Filtros"
+                          onClick={clearFilters}
+                          className="p-button-text p-button-sm"
+                          style={{ padding: "0.25rem 0.5rem" }}
+                        />
+                      </div>
+
+                      {/* Year Range Filter */}
+                      <div style={{ marginBottom: "15px" }}>
+                        <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                          Rango de Años de Graduación:
+                        </label>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                          <InputNumber
+                            placeholder="Desde"
+                            value={analyticsForm.filtros['ig02_2_ano_de_graduacion']?.gte}
+                            onValueChange={(e) => {
+                              const newFilters = { ...analyticsForm.filtros };
+                              if (!newFilters['ig02_2_ano_de_graduacion']) {
+                                newFilters['ig02_2_ano_de_graduacion'] = {};
+                              }
+                              if (e.value) {
+                                newFilters['ig02_2_ano_de_graduacion'].gte = e.value;
+                              } else {
+                                delete newFilters['ig02_2_ano_de_graduacion'].gte;
+                                if (Object.keys(newFilters['ig02_2_ano_de_graduacion']).length === 0) {
+                                  delete newFilters['ig02_2_ano_de_graduacion'];
+                                }
+                              }
+                              setAnalyticsForm({ ...analyticsForm, filtros: newFilters });
+                            }}
+                            min={2000}
+                            max={2025}
+                            style={{ width: "120px" }}
+                          />
+                          <span>a</span>
+                          <InputNumber
+                            placeholder="Hasta"
+                            value={analyticsForm.filtros['ig02_2_ano_de_graduacion']?.lte}
+                            onValueChange={(e) => {
+                              const newFilters = { ...analyticsForm.filtros };
+                              if (!newFilters['ig02_2_ano_de_graduacion']) {
+                                newFilters['ig02_2_ano_de_graduacion'] = {};
+                              }
+                              if (e.value) {
+                                newFilters['ig02_2_ano_de_graduacion'].lte = e.value;
+                              } else {
+                                delete newFilters['ig02_2_ano_de_graduacion'].lte;
+                                if (Object.keys(newFilters['ig02_2_ano_de_graduacion']).length === 0) {
+                                  delete newFilters['ig02_2_ano_de_graduacion'];
+                                }
+                              }
+                              setAnalyticsForm({ ...analyticsForm, filtros: newFilters });
+                            }}
+                            min={2000}
+                            max={2025}
+                            style={{ width: "120px" }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sex Filter */}
+                      <div style={{ marginBottom: "15px" }}>
+                        <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                          Sexo:
+                        </label>
+                        <Dropdown
+                          value={analyticsForm.filtros['ipg01_3_sexo']}
+                          onChange={(e) => handleFilterChange('ipg01_3_sexo', e.value)}
+                          options={filterOptions.sexo}
+                          placeholder="Todos"
+                          className="input-field"
+                          style={{ width: "200px" }}
+                          multiple
+                          showClear
+                        />
+                      </div>
+
+                      {/* Estado Civil Filter */}
+                      <div style={{ marginBottom: "15px" }}>
+                        <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                          Estado Civil:
+                        </label>
+                        <Dropdown
+                          value={analyticsForm.filtros['ipg02_4_estado_civil']}
+                          onChange={(e) => handleFilterChange('ipg02_4_estado_civil', e.value)}
+                          options={filterOptions.estado_civil}
+                          placeholder="Todos"
+                          className="input-field"
+                          style={{ width: "250px" }}
+                          multiple
+                          showClear
+                        />
+                      </div>
+
+                      {/* Condición Laboral Filter */}
+                      <div style={{ marginBottom: "10px" }}>
+                        <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                          Condición Laboral:
+                        </label>
+                        <Dropdown
+                          value={analyticsForm.filtros['ipg05_7_cual_es_su_condicion_laboral_actual']}
+                          onChange={(e) => handleFilterChange('ipg05_7_cual_es_su_condicion_laboral_actual', e.value)}
+                          options={filterOptions.condicion_laboral}
+                          placeholder="Todos"
+                          className="input-field"
+                          style={{ width: "250px" }}
+                          multiple
+                          showClear
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: "30px", textAlign: "center" }}>
+                  <Button
+                    label="Ejecutar Análisis"
+                    icon="pi pi-play"
+                    onClick={handleRunAnalytics}
+                    loading={analyticsLoading}
+                    className="p-button-success"
+                    style={{ marginRight: "10px" }}
+                  />
+                  <Button
+                    label="Generar Narrativa"
+                    icon="pi pi-file-edit"
+                    onClick={handleGenerateNarrative}
+                    loading={narrativeLoading}
+                    disabled={!analyticsResults}
+                    className="p-button-info"
+                  />
+                </div>
+              </div>
+            </Card>
+          </AccordionTab>
+
+          {/* Analytics Results */}
+          <AccordionTab header="Resultados" className="analytics-tab">
+            {analyticsLoading ? (
+              <div className="loading-container">
+                <ProgressSpinner />
+                <p>Ejecutando análisis...</p>
+              </div>
+            ) : (
+              <div>
+                {!analyticsResults ? (
+                  <div className="no-results-message">
+                    <p>No hay resultados disponibles.</p>
+                    <p>Configure y ejecute un análisis en la pestaña anterior para ver los resultados aquí.</p>
+                  </div>
+                ) : (
+                  renderAnalyticsResults()
+                )}
+                {renderNarrative()}
+              </div>
+            )}
+          </AccordionTab>
+        </Accordion>
+      </div>
+    );
+  };
+
   return (
     <div className="proyecto-container">
       <Button
@@ -782,6 +1396,9 @@ const Proyecto = () => {
           </TabPanel>
           <TabPanel header="Datos" className="proyecto-card">
             {datosContent()}
+          </TabPanel>
+          <TabPanel header="Analytics" className="proyecto-card">
+            {analyticsContent()}
           </TabPanel>
         </TabView>
       </div>

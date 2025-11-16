@@ -1,10 +1,14 @@
 from typing import Any, Dict, List
 import os
+import logging
 
 import pandas as pd
 from sqlalchemy import text
 
 from etl.db import make_engine
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 def _load_core_dataset(dataset_name: str, core_schema: str | None = None) -> pd.DataFrame:
@@ -123,7 +127,10 @@ def generate_general_summary(poblacion: Dict[str, Any],
 
     # 1) Cargar datos desde core.<dataset_name> y aplicar filtros
     df = _load_core_dataset(dataset_name)
+    logger.info(f"Loaded dataset {dataset_name} with {len(df)} rows and columns: {list(df.columns)}")
+    
     df = _apply_filters(df, poblacion)
+    logger.info(f"After filtering: {len(df)} rows remaining")
 
     # Actualizamos n en la población si no viene; esto se devuelve al cliente
     n = len(df)
@@ -135,19 +142,39 @@ def generate_general_summary(poblacion: Dict[str, Any],
         "total_registros": n
     }
 
-    # Pregunta de satisfacción "estrella" si existe; en tu survey ATI es ep07_18
-    sat_col = "ep07_18"
+    # Pregunta de satisfacción "estrella" si existe
+    sat_col = "ep07_18_en_general_cual_es_su_grado_de_satisfaccion_en_relacion"
     if sat_col in df.columns:
-        sat_vals = pd.to_numeric(df[sat_col], errors="coerce")
+        logger.info(f"Found satisfaction column {sat_col}")
+        # Para satisfacción categórica, convertir a escala numérica
+        sat_series = df[sat_col].dropna()
+        # Mapping de respuestas categóricas a escala numérica (1-5)
+        satisfaction_mapping = {
+            "Insatisfecho (a)": 1,
+            "Algo satisfecho (a)": 2,
+            "Satisfecho (a)": 3,
+            "Muy satisfecho (a)": 4,
+            "Extremadamente satisfecho (a)": 5
+        }
+        sat_vals = sat_series.map(satisfaction_mapping)
         if sat_vals.notna().any():
-            kpis["satisfaccion_media_ep07_18"] = float(sat_vals.mean(skipna=True))
-            kpis["nps"] = float(_compute_nps(sat_vals))
+            kpis["satisfaccion_media"] = float(sat_vals.mean(skipna=True))
+            # Para NPS con escala 1-5, ajustar criterios: 1-2=detractores, 3=neutros, 4-5=promotores
+            detractores = (sat_vals <= 2).sum()
+            promotores = (sat_vals >= 4).sum()
+            total = sat_vals.notna().sum()
+            kpis["nps"] = float((promotores - detractores) * 100.0 / total) if total else 0.0
+    else:
+        logger.info(f"Satisfaction column {sat_col} not found in columns: {list(df.columns)}")
 
-    # 3) Tablas de composición (por ahora, posgrados si existe)
+    # 3) Tablas de composición
     tablas: Dict[str, Any] = {}
 
-    if "posgrado" in df.columns:
-        vc = df["posgrado"].value_counts(dropna=False)
+    # Tabla de posgrados usando el nombre correcto de columna
+    posgrado_col = "ig01_1_el_posgrado_que_usted_curso_es"
+    if posgrado_col in df.columns:
+        logger.info(f"Found posgrado column {posgrado_col}")
+        vc = df[posgrado_col].value_counts(dropna=False)
         total_posgrados = vc.sum()
         filas_posgrados = []
         for nombre, conteo in vc.items():
@@ -160,17 +187,39 @@ def generate_general_summary(poblacion: Dict[str, Any],
                 "porcentaje": round(porcentaje, 1),
             })
         tablas["posgrados"] = filas_posgrados
+    else:
+        logger.info("Posgrado column not found")
+
+    # Tabla de programa (si existe la columna programa)
+    if "programa" in df.columns:
+        logger.info("Found programa column")
+        vc = df["programa"].value_counts(dropna=False)
+        total_programas = vc.sum()
+        filas_programas = []
+        for nombre, conteo in vc.items():
+            if pd.isna(nombre):
+                nombre = "Sin especificar"
+            porcentaje = (conteo * 100.0 / total_programas) if total_programas else 0.0
+            filas_programas.append({
+                "programa": str(nombre),
+                "total": int(conteo),
+                "porcentaje": round(porcentaje, 1),
+            })
+        tablas["programas"] = filas_programas
 
     ## Aca se puede expandir mas tablas si se quiere
 
     # 4) Distribuciones solicitadas
     distribuciones_resultado: Dict[str, Any] = {}
+    logger.info(f"Processing distributions for: {distribuciones}")
     for variable in distribuciones:
         if variable not in df.columns:
             # Si el cliente pide una distribución de una columna que no existe,
             # simplemente la ignoramos.
+            logger.warning(f"Distribution column '{variable}' not found in dataset columns: {list(df.columns)}")
             continue
 
+        logger.info(f"Processing distribution for {variable}")
         vc = df[variable].value_counts(dropna=False).sort_index()
         dist = {}
         for valor, conteo in vc.items():
@@ -178,6 +227,7 @@ def generate_general_summary(poblacion: Dict[str, Any],
             dist[clave] = int(conteo)
         distribuciones_resultado[variable] = dist
 
+    logger.info(f"Final result: kpis={kpis}, distribuciones={distribuciones_resultado}")
     return {
         "kpis": kpis,
         "tablas": tablas,

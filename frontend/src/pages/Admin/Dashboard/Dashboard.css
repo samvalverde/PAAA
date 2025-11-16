@@ -291,3 +291,69 @@ body, html {
   background: #c1c1c1;
   border-radius: 3px;
 }
+
+/* ETL Load Component Styles */
+.etl-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+}
+
+.etl-card .p-card-title {
+  color: white;
+  font-weight: bold;
+}
+
+.etl-form {
+  padding: 1rem;
+}
+
+.etl-form h4 {
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.etl-form p {
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 1.5rem;
+}
+
+.etl-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.etl-form .form-group label {
+  color: white;
+  font-weight: bold;
+}
+
+.etl-form .p-dropdown,
+.etl-form .p-inputtext {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.etl-form .p-dropdown:not(.p-disabled):hover,
+.etl-form .p-inputtext:enabled:hover {
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.etl-form .p-dropdown:not(.p-disabled).p-focus,
+.etl-form .p-inputtext:enabled:focus {
+  outline: 0 none;
+  outline-offset: 0;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.etl-results {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
+.etl-results p {
+  margin: 0.5rem 0;
+  color: #1976d2;
+}

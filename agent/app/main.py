@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from agente import agente as run_llm_agent 
 from carga import cargar_archivo                     # módulo de carga genérico
@@ -20,10 +21,24 @@ from analytics.results import generate_results
 # -----------------------------------------------------------------------------
 app = FastAPI(title="PAAA ETL API", version="0.1.0")
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://127.0.0.1:5174"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
+
 UPLOAD_DIR = Path("/app/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 MINIO_BUCKET = os.getenv("MINIO_BUCKET", "paaa")
+
+# Add explicit OPTIONS handler for CORS preflight
+@app.options("/{full_path:path}")
+async def options_handler():
+    return {"message": "OK"}
 
 
 # -----------------------------------------------------------------------------
@@ -229,11 +244,28 @@ def agente_resultados(payload: dict):
 
     """
     try:
+        # Debug logging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Received payload: {payload}")
+        
         poblacion = payload.get("poblacion")
         if not poblacion:
             raise HTTPException(status_code=400, detail="Falta 'poblacion' en el body")
 
         distribuciones = payload.get("distribuciones") or []
+        logger.warning(f"Distribuciones parsed: {distribuciones}, type: {type(distribuciones)}")
+        
+        # CRITICAL FIX: Ensure distribuciones is always a list
+        if isinstance(distribuciones, str):
+            logger.warning(f"WARNING: distribuciones came as string '{distribuciones}', converting to list")
+            distribuciones = [distribuciones]
+        elif not isinstance(distribuciones, list):
+            logger.warning(f"WARNING: distribuciones came as {type(distribuciones)}, converting to empty list")
+            distribuciones = []
+            
+        logger.warning(f"Final distribuciones: {distribuciones}")
+        
         tipo_analitica = payload.get("tipo_analitica")
 
         resultados = generate_results(poblacion, distribuciones, tipo_analitica)

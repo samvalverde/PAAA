@@ -49,131 +49,37 @@ ON CONFLICT (permission_name) DO NOTHING;
 -- "$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G"
 INSERT INTO users (username, email, password_hash, phone_number, user_type_id, school_id, is_active, created_at, updated_at)
 VALUES
-  ('maria.admin',   'maria.admin@example.com',   '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880001',
+  ('admin',   'admin@paaa.itcr.ac.cr',   '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
+   '+50625502222',
    (SELECT id FROM user_types WHERE type_name = 'admin'),
    (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   TRUE,
-   NOW(), NOW()),
-
-  ('samuel.admin',  'samuel.admin@example.com',  '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880002',
-   (SELECT id FROM user_types WHERE type_name = 'admin'),
-   (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   TRUE,
-   NOW(), NOW()),
-
-  ('juan.colab',    'juan.colab@example.com',    '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880003',
-   (SELECT id FROM user_types WHERE type_name = 'colaborador'),
-   (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   TRUE,
-   NOW(), NOW()),
-
-  ('ana.visor',     'ana.visor@example.com',     '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880004',
-   (SELECT id FROM user_types WHERE type_name = 'visor'),
-   (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   TRUE,
-   NOW(), NOW()),
-
-  ('roberto.colab', 'roberto.colab@example.com', '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880005',
-   (SELECT id FROM user_types WHERE type_name = 'colaborador'),
-   (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería Electrónica'),
-   TRUE,
-   NOW(), NOW()),
-
-  ('elena.visor',   'elena.visor@example.com',   '$2b$12$dCqPXxEl0bGHPmSkEogcIOADJZX9lbVtFY6wVOTb24GyaH.Ws3F8G',
-   '+50688880006',
-   (SELECT id FROM user_types WHERE type_name = 'visor'),
-   (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería Electrónica'),
    TRUE,
    NOW(), NOW())
 ON CONFLICT (email) DO NOTHING;
 
--- ====== Procesos ======
-INSERT INTO processes (process_name, school_id, encargado_id, estado, created_at, updated_at)
-VALUES
-  ('Acreditación 2025',
-   (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   (SELECT id FROM users WHERE username = 'juan.colab'),
-   'Pendiente', NOW(), NOW()),
-
-  ('Autoevaluación 2025',
-   (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería en Computación'),
-   (SELECT id FROM users WHERE username = 'maria.admin'),
-   'Completado', NOW(), NOW()),
-
-  ('Plan de mejora 2026',
-   (SELECT id FROM schools WHERE school_name = 'Escuela de Ingeniería Electrónica'),
-   (SELECT id FROM users WHERE username = 'roberto.colab'),
-   'En_proceso', NOW(), NOW())
-ON CONFLICT (process_name) DO NOTHING;
+-- Asegura que la columna `school_id` exista (para esquemas ya creados previamente)
+ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS school_id BIGINT;
 -- ====== Tipos de Acción ======
 INSERT INTO action_types (name, description)
 VALUES
+  -- Action types en inglés para compatibilidad con frontend
+  ('Create', 'Create a new resource'),
+  ('Update', 'Update an existing resource'),
+  ('Delete', 'Delete a resource'),
+  ('Read', 'Read/view a resource'),
+  ('Approve', 'Approve a request or action'),
+  ('Reject', 'Reject a request or action'),
+  ('Submit', 'Submit a request or document'),
+  ('Review', 'Review a document or request'),
+  ('Login', 'User login'),
+  ('Register', 'User registration'),
+  ('Upload', 'File upload'),
+  ('Download', 'File download'),
+  
+  -- Action types en español para compatibilidad con datos existentes
   ('crear_proceso', 'Creación de un nuevo proceso'),
   ('modificar_proceso', 'Modificación de un proceso existente'),
   ('eliminar_proceso', 'Eliminación de un proceso'),
   ('asignar_encargado', 'Asignación de un encargado a un proceso')
 ON CONFLICT (name) DO NOTHING;
 
--- Inserta varios registros referenciando usuarios, tipos de acción y la unidad (school_id)
--- Asegura que la columna `school_id` exista (para esquemas ya creados previamente)
-ALTER TABLE audit_log ADD COLUMN IF NOT EXISTS school_id BIGINT;
-
-INSERT INTO audit_log (user_id, action_type_id, school_id, description, created_at)
-VALUES
-  (
-    (SELECT id FROM users WHERE username = 'maria.admin'),
-    (SELECT id FROM action_types WHERE name = 'crear_proceso'),
-    (SELECT school_id FROM users WHERE username = 'maria.admin'),
-    'Creó el proceso Autoevaluación 2025', NOW()
-  ),
-  (
-    (SELECT id FROM users WHERE username = 'juan.colab'),
-    (SELECT id FROM action_types WHERE name = 'asignar_encargado'),
-    (SELECT school_id FROM users WHERE username = 'juan.colab'),
-    'Asignó un encargado al proceso Acreditación 2025', NOW()
-  ),
-  (
-    (SELECT id FROM users WHERE username = 'roberto.colab'),
-    (SELECT id FROM action_types WHERE name = 'modificar_proceso'),
-    (SELECT school_id FROM users WHERE username = 'roberto.colab'),
-    'Modificó el proceso Plan de mejora 2026', NOW()
-  ),
-  (
-    (SELECT id FROM users WHERE username = 'samuel.admin'),
-    (SELECT id FROM action_types WHERE name = 'crear_proceso'),
-    (SELECT school_id FROM users WHERE username = 'samuel.admin'),
-    'Registro de auditoría: creación manual de prueba', NOW()
-  ),
-  (
-    (SELECT id FROM users WHERE username = 'ana.visor'),
-    (SELECT id FROM action_types WHERE name = 'eliminar_proceso'),
-    (SELECT school_id FROM users WHERE username = 'ana.visor'),
-    'Intento de eliminación (registro de prueba)', NOW()
-  );
-
--- ====== Acciones ======
-INSERT INTO actions (user_id, process_id, action_type_id, timestamp)
-VALUES
-  (
-    (SELECT id FROM users WHERE username = 'maria.admin'),
-    (SELECT id FROM processes WHERE process_name = 'Autoevaluación 2025'),
-    (SELECT id FROM action_types WHERE name = 'crear_proceso'),
-    NOW()
-  ),
-  ( 
-    (SELECT id FROM users WHERE username = 'juan.colab'),
-    (SELECT id FROM processes WHERE process_name = 'Acreditación 2025'),
-    (SELECT id FROM action_types WHERE name = 'asignar_encargado'),
-    NOW()
-  ),
-  (
-    (SELECT id FROM users WHERE username = 'roberto.colab'),
-    (SELECT id FROM processes WHERE process_name = 'Plan de mejora 2026'),
-    (SELECT id FROM action_types WHERE name = 'modificar_proceso'),
-    NOW()
-  )

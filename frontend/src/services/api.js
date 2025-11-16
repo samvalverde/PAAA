@@ -308,6 +308,14 @@ export const ProcListAPI = {
     }
     
     return response; // Return the response object directly for blob handling
+  },
+
+  uploadFile: (fileData) => {
+    // For file uploads only (without creating a process)
+    return fetchAPI("/process/upload-file", {
+      method: 'POST',
+      body: fileData // Should be FormData object
+    });
   }
 };
 
@@ -317,6 +325,82 @@ export const AgentAPI = {
       method: 'POST',
       body: data
     }, false);
+  },
+
+  // ETL Load from MinIO to Database
+  loadFromMinIO: (dataset, programa, version = null, filename = null) => {
+    const formData = new FormData();
+    formData.append('programa', programa);
+    if (version) formData.append('version', version);
+    if (filename) formData.append('filename', filename);
+
+    return fetch(`http://localhost:8000/carga/${dataset}/minio`, {
+      method: 'POST',
+      mode: 'cors',
+      credentials: 'include',
+      body: formData
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    }).catch(error => {
+      console.error('ETL Load error:', error);
+      throw error;
+    });
+  },
+
+  // Analytics endpoints
+  getAnalytics: async (payload) => {
+    try {
+      const response = await fetch('http://localhost:8000/agente/resultados', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Analytics error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Analytics request failed:', error);
+      throw error;
+    }
+  },
+
+  generateNarrative: (payload) => {
+    return fetch('http://localhost:8000/agente/redactar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    });
+  },
+
+  getPostgradosAnalysis: (programa) => {
+    return fetch(`http://localhost:8000/analisis/posgrados?programa=${programa}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    });
   }
 }
 
@@ -333,5 +417,30 @@ export const AuditAPI = {
   getAuditsByUser: (userId) => {
     // Token will be automatically included by fetchAPI
     return fetchAPI(`/audit/${userId}`);
+  },
+
+  // Log audit action by ID
+  logAction: (actionData) => {
+    return fetchAPI("/audit/log", {
+      method: "POST",
+      body: JSON.stringify(actionData)
+    });
+  },
+
+  // Log audit action by name (easier to use)
+  logActionByName: (actionTypeName, description, schoolId = null) => {
+    return fetchAPI("/audit/log-by-name", {
+      method: "POST",
+      body: JSON.stringify({
+        action_type_name: actionTypeName,
+        description: description,
+        school_id: schoolId
+      })
+    });
+  },
+
+  // Get available action types
+  getActionTypes: () => {
+    return fetchAPI("/audit/action-types");
   }
 };
