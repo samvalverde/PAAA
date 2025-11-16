@@ -210,7 +210,12 @@ def update_user(
     
     # Apply updates
     for field, value in update_data.items():
-        setattr(existing_user, field, value)
+        if field == "password":
+            # Hash password before saving
+            hashed_password = get_password_hash(value)
+            setattr(existing_user, "password_hash", hashed_password)
+        else:
+            setattr(existing_user, field, value)
     
     # Update the updated_at timestamp
     existing_user.updated_at = datetime.utcnow()

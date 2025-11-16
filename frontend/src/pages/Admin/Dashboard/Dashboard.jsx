@@ -389,26 +389,24 @@ const Dashboard = () => {
                 />
               </div>
 
-              <div className="form-group" style={{ marginTop: "15px" }}>
+              <div className="form-group" style={{ marginTop: "25px" }}>
                 <FloatLabel>
                   <InputText
                     id="etl-version"
                     value={etlForm.version}
                     onChange={(e) => setEtlForm({ ...etlForm, version: e.target.value })}
-                    placeholder="Ej: v2.0, 2024-11-15 (opcional)"
                     style={{ width: "100%" }}
                   />
                   <label htmlFor="etl-version">Versión (Opcional)</label>
                 </FloatLabel>
               </div>
 
-              <div className="form-group" style={{ marginTop: "15px" }}>
+              <div className="form-group" style={{ marginTop: "25px" }}>
                 <FloatLabel>
                   <InputText
                     id="etl-filename"
                     value={etlForm.filename}
                     onChange={(e) => setEtlForm({ ...etlForm, filename: e.target.value })}
-                    placeholder="nombre_archivo.csv (opcional)"
                     style={{ width: "100%" }}
                   />
                   <label htmlFor="etl-filename">Nombre del Archivo (Opcional)</label>

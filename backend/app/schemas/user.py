@@ -19,6 +19,7 @@ class UserUpdate(BaseModel):
     user_type_id: Optional[int] = None
     school_id: Optional[int] = None
     is_active: Optional[bool] = None
+    password: Optional[str] = None  # Allow password updates
 
 class UserOut(UserBase):
     id: int

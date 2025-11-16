@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "primereact/button";
 import { Card } from "primereact/card";
 import { InputText } from "primereact/inputtext";
+import { Password } from "primereact/password";
 import { Toast } from "primereact/toast";
 import { useRef } from "react";
 import SideBar from "../../../components/SideBar";
@@ -35,10 +36,16 @@ const UserProfile = () => {
       console.log("Full user data:", fullUserData); // Debug log
       
       if (fullUserData) {
-        setUser(fullUserData);
+        setUser({
+          ...fullUserData,
+          password: '' // Initialize password field
+        });
       } else {
         // Fallback to current user data if not found in list
-        setUser(currentUser);
+        setUser({
+          ...currentUser,
+          password: '' // Initialize password field
+        });
       }
     } catch (err) {
       console.error("Error loading user profile:", err);
@@ -53,10 +60,15 @@ const UserProfile = () => {
   };
 
   const handleChange = (field, value) => {
-    setUser((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    console.log(`handleChange called: field=${field}, value=${value}`);
+    setUser((prev) => {
+      const newUser = {
+        ...prev,
+        [field]: value,
+      };
+      console.log(`Updated user state:`, newUser);
+      return newUser;
+    });
   };
 
   const handleSave = async () => {
@@ -68,6 +80,20 @@ const UserProfile = () => {
         email: User.email,
         phone_number: User.phone_number,
       };
+
+      console.log('Current User state before validation:', User);
+      console.log('User.password value:', User.password);
+      console.log('User.password type:', typeof User.password);
+
+      // Add password only if it's provided and not empty
+      if (User.password && typeof User.password === 'string' && User.password.trim() !== '') {
+        updateData.password = User.password;
+        console.log('✅ Adding password to updateData:', User.password);
+      } else {
+        console.log('❌ No password provided or empty. User.password:', User.password);
+      }
+
+      console.log('Final updateData being sent:', updateData);
 
       // Call the API to update the user
       const updatedUser = await UserListAPI.updateUser(User.id, updateData);
@@ -175,6 +201,23 @@ const UserProfile = () => {
                 <span className="field-value">
                   {User?.phone_number || 'No especificado'}
                 </span>
+              )}
+            </div>
+
+            {/* Password - Editable */}
+            <div className="field">
+              <label className="field-label">Contraseña</label>
+              {isEditing ? (
+                <Password
+                  value={User?.password || ''}
+                  onChange={(e) => handleChange("password", e.target.value)}
+                  className="editable-input"
+                  placeholder="Nueva contraseña (opcional)"
+                  feedback={false}
+                  toggleMask
+                />
+              ) : (
+                <span className="field-value">••••••••</span>
               )}
             </div>
 
