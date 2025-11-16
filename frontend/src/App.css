@@ -1,9 +1,45 @@
 #root {
-  max-width: 1280px;
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Login page specific styling */
+.login-root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+/* Login container styling */
+.login-card {
+  width: 100%;
+  max-width: 400px;
   margin: 0 auto;
-  margin-top: 1rem;
-  padding-left: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  background: white;
+}
+
+.login-card .p-card-title {
   text-align: center;
+  color: #2c5282;
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.login-card .p-card-content {
+  padding: 2rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .logo {
@@ -47,6 +83,44 @@
 }
 
 .btn{
-  background-color:#646cffaa;
+  background-color: #667eea;
   color: white;
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  margin-top: 1rem;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background-color: #5a67d8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+/* Input group styling for login */
+.p-inputgroup {
+  margin-bottom: 0;
+}
+
+.p-inputgroup-addon {
+  background-color: #f7fafc;
+  border-color: #e2e8f0;
+  color: #667eea;
+}
+
+.p-inputtext {
+  border-color: #e2e8f0;
+  border-radius: 0 8px 8px 0;
+}
+
+.p-inputtext:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
 }

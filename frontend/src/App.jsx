@@ -9,6 +9,13 @@ import Usuarios from "./pages/Admin/Usuarios/Usuarios";
 import Usuario from "./pages/Admin/Usuario/Usuario";
 import Auditorias from "./pages/Admin/Auditorias/Auditorias";
 
+// User pages
+import UserDashboard from "./pages/User/Dashboard/Dashboard";
+import UserProcesos from "./pages/User/Procesos/Procesos";
+import UserProyecto from "./pages/User/Proyecto/Proyecto";
+import UserAuditorias from "./pages/User/Auditorias/Auditorias";
+import UserProfile from "./pages/User/Profile/Profile";
+
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FloatLabel } from "primereact/floatlabel";
@@ -19,7 +26,7 @@ import "primereact/resources/primereact.min.css"; //core css
 import "primeicons/primeicons.css";
 
 import "./App.css";
-import { authAPI } from "./services/api";
+import { authAPI, userAPI } from "./services/api";
 
 function Login() {
   const navigate = useNavigate();
@@ -31,8 +38,22 @@ function Login() {
       console.log(loged);
       if (loged?.access_token) {
         localStorage.setItem("access_token", loged.access_token);
+        
+        // Check user role and redirect accordingly
+        try {
+          const userData = await userAPI.getCurrentUser();
+          
+          if (userData.role === 'admin') {
+            navigate("/admin/dashboard");
+          } else {
+            navigate("/user/dashboard");
+          }
+        } catch (roleError) {
+          console.error("Role check failed:", roleError);
+          // Fallback to admin dashboard if role check fails
+          navigate("/admin/dashboard");
+        }
       }
-      navigate("/dashboard");
     } catch (error) {
       alert("Credenciales incorrectas");
     }
@@ -46,37 +67,38 @@ function Login() {
   };
 
   return (
-    <>
-      <Card title="Login">
-        <div className="p-inputgroup flex-1">
-          <span className="p-inputgroup-addon">
-            <i className="pi pi-user"></i>
-          </span>
-          <FloatLabel>
-            <InputText
-              id="username"
-              value={body.username}
-              onChange={(e) => handleChange("username", e.target.value)}
-            />
-            <label htmlFor="username">Username</label>
-          </FloatLabel>
-        </div>
+    <div className="login-root">
+      <Card className="login-card" title="Login">
+        <div className="login-form">
+          <div className="p-inputgroup">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-user"></i>
+            </span>
+            <FloatLabel>
+              <InputText
+                id="username"
+                value={body.username}
+                onChange={(e) => handleChange("username", e.target.value)}
+              />
+              <label htmlFor="username">Username</label>
+            </FloatLabel>
+          </div>
 
-        <div className="p-inputgroup space">
-          <span className="p-inputgroup-addon">
-            <i className="pi pi-lock"></i>
-          </span>
-          <FloatLabel>
-            <InputText
-              id="password"
-              type="password"
-              value={body.password}
-              onChange={(e) => handleChange("password", e.target.value)}
-            />
-            <label htmlFor="password">Password</label>
-          </FloatLabel>
-        </div>
-        <div className="card">
+          <div className="p-inputgroup">
+            <span className="p-inputgroup-addon">
+              <i className="pi pi-lock"></i>
+            </span>
+            <FloatLabel>
+              <InputText
+                id="password"
+                type="password"
+                value={body.password}
+                onChange={(e) => handleChange("password", e.target.value)}
+              />
+              <label htmlFor="password">Password</label>
+            </FloatLabel>
+          </div>
+          
           <Button
             className="btn"
             label="Login"
@@ -87,7 +109,7 @@ function Login() {
           />
         </div>
       </Card>
-    </>
+    </div>
   );
 }
 
@@ -95,6 +117,23 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin/dashboard" element={<Dashboard />} />
+      <Route path="/admin/procesos" element={<Procesos />} />
+      <Route path="/admin/proyecto" element={<Proyecto />} />
+      <Route path="/admin/usuarios" element={<Usuarios />} />
+      <Route path="/admin/usuario" element={<Usuario />} />
+      <Route path="/admin/auditorias" element={<Auditorias />} />
+      
+      {/* User Routes */}
+      <Route path="/user/dashboard" element={<UserDashboard />} />
+      <Route path="/user/procesos" element={<UserProcesos />} />
+      <Route path="/user/proyecto" element={<UserProyecto />} />
+      <Route path="/user/auditorias" element={<UserAuditorias />} />
+      <Route path="/user/profile" element={<UserProfile />} />
+      
+      {/* Legacy routes for backwards compatibility */}
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/procesos" element={<Procesos />} />
       <Route path="/proyecto" element={<Proyecto />} />

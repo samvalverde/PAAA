@@ -257,6 +257,11 @@ export const UserListAPI = {
     return fetchAPI("/users/");
   },
 
+  getCurrentUser: () => {
+    // Get current logged-in user info
+    return fetchAPI("/users/me");
+  },
+
   createUser: (userData) => {
     // Token will be automatically included by fetchAPI
     return fetchAPI("/users/create", {
@@ -285,6 +290,17 @@ export const UserListAPI = {
 };
 
 // =========================================
+// User API (Simplified for common operations)
+// =========================================
+
+export const userAPI = {
+  getCurrentUser: () => {
+    // Get current logged-in user info
+    return fetchAPI("/users/me");
+  }
+};
+
+// =========================================
 // Process API
 // =========================================
 
@@ -292,6 +308,21 @@ export const ProcListAPI = {
   getProcList: () => {
     // Token will be automatically included by fetchAPI
     return fetchAPI("/process/all");
+  },
+
+  // User-specific methods (filter on frontend for now)
+  getUserProcList: async () => {
+    // Get current user first, then filter processes
+    const [userInfo, allProcesses] = await Promise.all([
+      UserListAPI.getCurrentUser(),
+      fetchAPI("/process/all")
+    ]);
+    
+    // Filter processes by current user (assuming encargado field contains username)
+    return allProcesses.filter(process => 
+      process.encargado === userInfo.username || 
+      process.school_id === userInfo.school_id
+    );
   },
 
   getProcById: (processId) => {

@@ -1,0 +1,385 @@
+/* User Auditorias Page Styles */
+.auditorias-container {
+  position: relative;
+}
+
+.sidebar-toggle {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: #667eea;
+  border: none;
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.auditorias-content {
+  padding: 20px;
+  margin-left: 0;
+  transition: margin-left 0.3s ease;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.page-title {
+  color: #2c5282;
+  margin-bottom: 24px;
+  font-size: 2.5rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* User Activity Header Card */
+.user-activity-header {
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: none;
+}
+
+.activity-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+}
+
+.user-info h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.user-info p {
+  margin: 8px 0 0;
+  opacity: 0.9;
+  font-size: 0.95rem;
+}
+
+.activity-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 16px;
+  border-radius: 8px;
+  min-width: 80px;
+  backdrop-filter: blur(10px);
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* Audits Table Card */
+.audits-table-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+}
+
+.audits-table-card .p-card-title {
+  color: #2d3748;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.user-audits-table {
+  margin-top: 16px;
+}
+
+.action-icon {
+  font-size: 1.2rem;
+  color: #667eea;
+  padding: 8px;
+  border-radius: 50%;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.description-text {
+  color: #4a5568;
+  font-size: 0.9rem;
+}
+
+.details-text {
+  color: #718096;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* Activity Summary Card */
+.activity-summary-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.activity-summary-card .p-card-title {
+  color: #2d3748;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 16px 0;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.summary-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.summary-icon {
+  font-size: 2rem;
+  color: #667eea;
+  padding: 16px;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 50%;
+}
+
+.summary-details h4 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.summary-details p {
+  margin: 4px 0 0;
+  color: #718096;
+  font-size: 0.9rem;
+}
+
+/* Error handling */
+.error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+  color: #e53e3e;
+}
+
+.error-message i {
+  font-size: 3rem;
+  color: #feb2b2;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: 20px;
+}
+
+.loading-container p {
+  color: #718096;
+  font-size: 1.1rem;
+}
+
+/* DataTable customizations */
+.user-audits-table .p-datatable-header {
+  background: #667eea;
+  color: white;
+  font-weight: 600;
+}
+
+.user-audits-table .p-datatable-thead > tr > th {
+  background: #f8fafc;
+  color: #2d3748;
+  font-weight: 600;
+  border-bottom: 2px solid #667eea;
+}
+
+.user-audits-table .p-datatable-tbody > tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.user-audits-table .p-datatable-tbody > tr:hover {
+  background: #edf2f7;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .auditorias-content {
+    padding: 16px;
+  }
+
+  .page-title {
+    font-size: 2rem;
+    margin-bottom: 16px;
+  }
+
+  .activity-header-content {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .user-info {
+    text-align: center;
+  }
+
+  .activity-stats {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .stat-card {
+    min-width: 70px;
+    padding: 12px;
+  }
+
+  .stat-number {
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .summary-item {
+    padding: 16px;
+  }
+
+  .summary-icon {
+    font-size: 1.5rem;
+    padding: 12px;
+  }
+
+  .user-audits-table {
+    font-size: 0.9rem;
+  }
+
+  .sidebar-toggle {
+    top: 16px;
+    left: 16px;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auditorias-content {
+    padding: 12px;
+  }
+
+  .page-title {
+    font-size: 1.8rem;
+  }
+
+  .activity-header-content {
+    padding: 16px;
+  }
+
+  .activity-stats {
+    gap: 12px;
+  }
+
+  .stat-card {
+    min-width: 60px;
+    padding: 10px;
+  }
+
+  .stat-number {
+    font-size: 1.3rem;
+  }
+
+  .summary-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .summary-icon {
+    font-size: 1.2rem;
+    padding: 10px;
+  }
+}
+
+/* PrimeReact Card overrides */
+.p-card {
+  border: none;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.p-card .p-card-body {
+  padding: 1.5rem;
+}
+
+.p-card .p-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 1rem;
+}
+
+/* DataTable responsive */
+.p-datatable-responsive-demo .p-datatable-tbody > tr > td .p-column-title {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .p-datatable.p-datatable-responsive-demo .p-datatable-thead > tr > th,
+  .p-datatable.p-datatable-responsive-demo .p-datatable-tfoot > tr > td {
+    display: none !important;
+  }
+
+  .p-datatable.p-datatable-responsive-demo .p-datatable-tbody > tr > td {
+    text-align: left;
+    display: block;
+    border: 0 none;
+    width: 100% !important;
+    float: left;
+    clear: left;
+  }
+
+  .p-datatable.p-datatable-responsive-demo .p-datatable-tbody > tr > td .p-column-title {
+    padding: 0.4rem;
+    min-width: 30%;
+    display: inline-block;
+    margin: -0.4em 1em -0.4em -0.4rem;
+    font-weight: bold;
+  }
+}

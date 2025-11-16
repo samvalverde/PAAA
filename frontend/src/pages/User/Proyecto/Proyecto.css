@@ -1,0 +1,306 @@
+/* Main container — fixed full-page layout */
+.proyecto-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background-color: #f8f9fa;
+  min-height: 100vh;              
+  width: 100vw;               
+  overflow-x: hidden;
+  overflow-y: auto;           
+  padding: 2rem 0;
+  box-sizing: border-box;
+}
+
+.sidebar-toggle {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: #667eea;
+  border: none;
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Title styling */
+.proyecto-container .page-title {
+  color: #495057 !important;
+  font-size: 1.8rem !important;
+  text-align: center;
+  margin-bottom: 1rem;
+  width: 100%;
+  font-weight: 600 !important;
+}
+
+/* Accordion wrapper — steady width and height */
+.proyecto-accordion {
+  width: 100%;
+  max-width: 1100px;          
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Each accordion tab area */
+.proyecto-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Card content — scrolls inside */
+.proyecto-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;           /* 👈 internal scroll for content */
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Form inputs */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+label {
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.input-field {
+  width: 100%;
+}
+
+.add-button {
+  margin-top: 0.5rem;
+  background-color: #667eea !important;
+  border: none !important;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  grid-template-rows: auto auto;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 400px;
+}
+
+/* Responsiveness */
+@media (max-width: 1024px) {
+  .proyecto-accordion {
+    max-width: 90%;
+  }
+}
+
+@media (max-width: 768px) {
+  .proyecto-container {
+    padding: 1rem 0;
+  }
+
+  .proyecto-accordion {
+    max-width: 95%;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .main-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 1rem;
+  }
+}
+
+/* Additional styles for User Proyecto specific content */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  gap: 20px;
+}
+
+.loading-container p {
+  color: #718096;
+  font-size: 1.1rem;
+}
+
+/* Error states */
+.error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px;
+  text-align: center;
+  color: #e53e3e;
+}
+
+.error-message i {
+  font-size: 3rem;
+  color: #feb2b2;
+}
+
+/* Status badges */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-badge.completed {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.status-badge.in-progress {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+.status-badge.pending {
+  background: #feebc8;
+  color: #c05621;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .project-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .proyecto-content {
+    padding: 16px;
+  }
+
+  .page-title {
+    font-size: 2rem;
+    margin-bottom: 16px;
+  }
+
+  .project-header-content {
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .project-actions {
+    justify-content: center;
+  }
+
+  .analysis-controls {
+    flex-direction: column;
+  }
+
+  .analysis-controls .p-button {
+    width: 100%;
+  }
+
+  .project-details-grid {
+    gap: 16px;
+  }
+
+  .sidebar-toggle {
+    top: 16px;
+    left: 16px;
+    padding: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .proyecto-content {
+    padding: 12px;
+  }
+
+  .page-title {
+    font-size: 1.8rem;
+  }
+
+  .project-header-content {
+    padding: 16px;
+  }
+
+  .project-info h3 {
+    font-size: 1.2rem;
+  }
+
+  .project-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .analysis-results {
+    padding: 16px;
+  }
+
+  .no-results {
+    padding: 40px 20px;
+  }
+
+  .no-results i {
+    font-size: 3rem;
+  }
+}
+
+/* Chart container styling */
+.chart-container {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.chart-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+/* Button customizations */
+.p-button {
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.p-button:hover {
+  transform: translateY(-1px);
+}
+
+.p-button.p-button-info {
+  background: #667eea;
+  border-color: #667eea;
+}
+
+.p-button.p-button-success {
+  background: #48bb78;
+  border-color: #48bb78;
+}
+
+.p-button.p-button-warning {
+  background: #ed8936;
+  border-color: #ed8936;
+}
