@@ -63,6 +63,10 @@ def create_user(user: UserCreate, db: Session = Depends(get_db_users), current_u
     existing = db.query(User).filter(User.email == user.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Validate password length
+    if len(user.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
 
     created_at = datetime.utcnow()
     hashed_pw = get_password_hash(user.password)
@@ -207,6 +211,11 @@ def update_user(
         username_check = db.query(User).filter(User.username == update_data["username"], User.id != user_id).first()
         if username_check:
             raise HTTPException(status_code=400, detail="Username already taken by another user")
+        
+    # Check password length if being updated
+    if "password" in update_data:
+        if len(update_data["password"]) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
     
     # Apply updates
     for field, value in update_data.items():
