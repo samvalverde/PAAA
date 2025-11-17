@@ -8,6 +8,7 @@ import { Tag } from 'primereact/tag';
 import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
+import { MultiSelect } from 'primereact/multiselect';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { FloatLabel } from 'primereact/floatlabel';
@@ -72,12 +73,28 @@ const Proyecto = () => {
 
   // Helper functions for filters
   const handleFilterChange = (field, value) => {
+    console.log('handleFilterChange called:', { field, value, type: typeof value });
     const newFilters = { ...analyticsForm.filtros };
-    if (value && value.length > 0) {
+    
+    // Handle different value types: null, single value, or array
+    if (value === null || value === undefined) {
+      // Clear the filter when value is null/undefined
+      delete newFilters[field];
+    } else if (Array.isArray(value) && value.length === 0) {
+      // Clear the filter when empty array
+      delete newFilters[field];
+    } else if (Array.isArray(value) && value.length > 0) {
+      // Set the filter when array has values
       newFilters[field] = value;
+    } else if (value !== null && value !== undefined && value !== '') {
+      // Set the filter for non-empty single values
+      newFilters[field] = Array.isArray(value) ? value : [value];
     } else {
+      // Clear the filter for empty strings or other falsy values
       delete newFilters[field];
     }
+    
+    console.log('Setting new filters:', newFilters);
     setAnalyticsForm({ ...analyticsForm, filtros: newFilters });
   };
 
@@ -180,10 +197,6 @@ const Proyecto = () => {
     } else {
       // Clear questions if not detalle_pregunta
       setAvailableQuestions([]);
-      // Also clear variable_principal if switching away from detalle_pregunta
-      if (analyticsForm.variable_principal) {
-        setAnalyticsForm(prev => ({ ...prev, variable_principal: "" }));
-      }
     }
   }, [analyticsForm.tipo_analitica, analyticsForm.dataset]);
 
@@ -484,10 +497,10 @@ const Proyecto = () => {
         return;
       }
 
-      // For detalle_pregunta, variable_principal is required
+      // For detalle_pregunta, distribuciones (questions) are required
       if (analyticsForm.tipo_analitica === "detalle_pregunta") {
-        if (!analyticsForm.variable_principal) {
-          alert("Para análisis de detalle de pregunta debe seleccionar una variable principal");
+        if (!analyticsForm.distribuciones || analyticsForm.distribuciones.length === 0) {
+          alert("Para análisis de detalle de pregunta debe seleccionar al menos una pregunta");
           return;
         }
       }
@@ -495,19 +508,23 @@ const Proyecto = () => {
       // Prepare distribuciones based on analysis type
       let distribuciones;
       if (analyticsForm.tipo_analitica === "detalle_pregunta") {
-        // Para detalle_pregunta, enviar la variable principal como array de un elemento
-        distribuciones = [analyticsForm.variable_principal];
+        // Para detalle_pregunta, usar las distribuciones seleccionadas directamente
+        distribuciones = analyticsForm.distribuciones || [];
       } else {
         // Para otros tipos, usar las distribuciones seleccionadas
         distribuciones = analyticsForm.distribuciones || [];
       }
 
+      // Map filter keys to match backend expectations
+      const mappedFilters = { ...analyticsForm.filtros };
+      // Note: Keep original column names as backend expects them
+      
       // Prepare payload for analytics
       const payload = {
         poblacion: {
           dataset: analyticsForm.dataset,
           programa: programa,
-          filtros: analyticsForm.filtros,
+          filtros: mappedFilters,
         },
         distribuciones: distribuciones,
         tipo_analitica: analyticsForm.tipo_analitica
@@ -515,6 +532,10 @@ const Proyecto = () => {
 
       console.log("Running analytics with payload:", payload);
       console.log("DEBUG - analyticsForm state:", analyticsForm);
+      console.log("DEBUG - Original filters:", analyticsForm.filtros);
+      console.log("DEBUG - Mapped filters:", mappedFilters);
+      console.log("DEBUG - Original filters before mapping:", analyticsForm.filtros);
+      console.log("DEBUG - Mapped filters sent to backend:", mappedFilters);
       console.log("DEBUG - distribuciones value:", distribuciones);
       console.log("DEBUG - distribuciones type:", typeof distribuciones);
 
@@ -1026,14 +1047,54 @@ const Proyecto = () => {
             {resultados.kpis && (
               <div className="kpis-section">
                 <h5>KPIs</h5>
-                <div className="kpis-grid">
-                  {Object.entries(resultados.kpis).map(([key, value]) => (
-                    <div key={key} className="kpi-card">
-                      <div className="kpi-label">{key.replace(/_/g, ' ').toUpperCase()}</div>
-                      <div className="kpi-value">{value}</div>
-                    </div>
-                  ))}
-                </div>
+                {/* Check if KPIs are in nested format (detalle_pregunta) or flat format (resumen_general) */}
+                {(() => {
+                  // Check if any KPI value is an object (nested structure)
+                  const hasNestedKpis = Object.values(resultados.kpis).some(value => 
+                    typeof value === 'object' && value !== null && !Array.isArray(value)
+                  );
+                  
+                  if (hasNestedKpis) {
+                    // Nested structure for detalle_pregunta (multiple variables)
+                    return Object.entries(resultados.kpis).map(([variableName, variableKpis]) => (
+                      <div key={variableName} className="variable-kpis-section">
+                        <h6>{variableName.replace(/_/g, ' ').toUpperCase()}</h6>
+                        <div className="kpis-grid">
+                          {Object.entries(variableKpis).map(([key, value]) => (
+                            <div key={`${variableName}-${key}`} className="kpi-card">
+                              <div className="kpi-label">{key.replace(/_/g, ' ').toUpperCase()}</div>
+                              <div className="kpi-value">
+                                {typeof value === 'number' ? (
+                                  Number.isInteger(value) ? value : value.toFixed(2)
+                                ) : (
+                                  String(value)
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ));
+                  } else {
+                    // Flat structure for resumen_general (single KPI set)
+                    return (
+                      <div className="kpis-grid">
+                        {Object.entries(resultados.kpis).map(([key, value]) => (
+                          <div key={key} className="kpi-card">
+                            <div className="kpi-label">{key.replace(/_/g, ' ').toUpperCase()}</div>
+                            <div className="kpi-value">
+                              {typeof value === 'number' ? (
+                                Number.isInteger(value) ? value : value.toFixed(2)
+                              ) : (
+                                String(value)
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
+                })()}
               </div>
             )}
 
@@ -1158,22 +1219,23 @@ const Proyecto = () => {
                 {analyticsForm.tipo_analitica === "detalle_pregunta" ? (
                   <div className="form-group" style={{ marginTop: "20px" }}>
                     <label htmlFor="variable_principal" style={{ marginBottom: "10px", display: "block", fontWeight: "bold" }}>
-                      Variable a Analizar *
+                      Preguntas a Analizar *
                     </label>
                     <small style={{ color: "#666", fontSize: "12px", display: "block", marginBottom: "5px" }}>
-                      Seleccione UNA pregunta de la encuesta cargada para análisis detallado
+                      Seleccione una o más preguntas de la encuesta cargada para análisis detallado
                     </small>
-                    <Dropdown
+                    <MultiSelect
                       id="variable_principal"
-                      value={analyticsForm.variable_principal}
+                      value={analyticsForm.distribuciones || []}
                       onChange={(e) =>
-                        setAnalyticsForm({ ...analyticsForm, variable_principal: e.value })
+                        setAnalyticsForm({ ...analyticsForm, distribuciones: e.value || [] })
                       }
                       options={availableQuestions}
-                      placeholder={questionsLoading ? "Cargando preguntas..." : "Seleccionar pregunta"}
+                      placeholder={questionsLoading ? "Cargando preguntas..." : "Seleccionar preguntas"}
                       disabled={questionsLoading || availableQuestions.length === 0}
                       className="input-field"
                       style={{ width: "100%" }}
+                      showClear
                     />
                     {questionsLoading && (
                       <small style={{ color: "#666", fontSize: "11px", display: "block", marginTop: "3px" }}>
@@ -1195,18 +1257,17 @@ const Proyecto = () => {
                     <small style={{ color: "#666", fontSize: "12px", display: "block", marginBottom: "5px" }}>
                       Para resumen general: deje vacío para KPIs básicos, o seleccione variables para ver distribuciones específicas
                     </small>
-                    <Dropdown
+                    <MultiSelect
                       id="distributions"
-                      value={analyticsForm.distribuciones}
+                      value={analyticsForm.distribuciones || []}
                       onChange={(e) => {
                         console.log("Distribuciones onChange:", e.value);
-                        setAnalyticsForm({ ...analyticsForm, distribuciones: Array.isArray(e.value) ? e.value : (e.value ? [e.value] : []) })
+                        setAnalyticsForm({ ...analyticsForm, distribuciones: e.value || [] })
                       }}
                       options={distributionOptions}
                       placeholder="Sin variables adicionales"
                       className="input-field"
                       style={{ width: "100%" }}
-                      multiple
                       showClear
                     />
                   </div>
@@ -1257,11 +1318,19 @@ const Proyecto = () => {
                         if (key === 'ig02_2_ano_de_graduacion') label = 'Años de Graduación';
                         
                         if (key === 'ig02_2_ano_de_graduacion') {
-                          return `${label}: ${value.gte || '...'} - ${value.lte || '...'}`;
+                          if (!value || typeof value !== 'object' || Object.keys(value).length === 0) {
+                            return null; // Don't display empty filter objects
+                          }
+                          const fromYear = value.gte ? `${value.gte}` : '...';
+                          const toYear = value.lte ? `${value.lte}` : '...';
+                          return `${label}: ${fromYear} - ${toYear}`;
                         } else {
+                          if (Array.isArray(value) && value.length === 0) {
+                            return null; // Don't display empty arrays
+                          }
                           return `${label}: ${Array.isArray(value) ? value.join(', ') : value}`;
                         }
-                      }).join(' | ')}
+                      }).filter(Boolean).join(' | ')}
                     </div>
                   )}
                   
@@ -1289,11 +1358,12 @@ const Proyecto = () => {
                             placeholder="Desde"
                             value={analyticsForm.filtros['ig02_2_ano_de_graduacion']?.gte}
                             onValueChange={(e) => {
+                              console.log('Year GTE filter changed:', e.value, 'Current filters before change:', analyticsForm.filtros);
                               const newFilters = { ...analyticsForm.filtros };
                               if (!newFilters['ig02_2_ano_de_graduacion']) {
                                 newFilters['ig02_2_ano_de_graduacion'] = {};
                               }
-                              if (e.value) {
+                              if (e.value !== null && e.value !== undefined && e.value !== '') {
                                 newFilters['ig02_2_ano_de_graduacion'].gte = e.value;
                               } else {
                                 delete newFilters['ig02_2_ano_de_graduacion'].gte;
@@ -1301,7 +1371,13 @@ const Proyecto = () => {
                                   delete newFilters['ig02_2_ano_de_graduacion'];
                                 }
                               }
-                              setAnalyticsForm({ ...analyticsForm, filtros: newFilters });
+                              console.log('Setting year filters (GTE) - New filters:', newFilters);
+                              console.log('About to set analytics form with filters:', newFilters);
+                              setAnalyticsForm(prevForm => {
+                                const newForm = { ...prevForm, filtros: newFilters };
+                                console.log('SetAnalyticsForm called with:', newForm);
+                                return newForm;
+                              });
                             }}
                             min={2000}
                             max={2025}
@@ -1312,11 +1388,12 @@ const Proyecto = () => {
                             placeholder="Hasta"
                             value={analyticsForm.filtros['ig02_2_ano_de_graduacion']?.lte}
                             onValueChange={(e) => {
+                              console.log('Year LTE filter changed:', e.value, 'Current filters before change:', analyticsForm.filtros);
                               const newFilters = { ...analyticsForm.filtros };
                               if (!newFilters['ig02_2_ano_de_graduacion']) {
                                 newFilters['ig02_2_ano_de_graduacion'] = {};
                               }
-                              if (e.value) {
+                              if (e.value !== null && e.value !== undefined && e.value !== '') {
                                 newFilters['ig02_2_ano_de_graduacion'].lte = e.value;
                               } else {
                                 delete newFilters['ig02_2_ano_de_graduacion'].lte;
@@ -1324,7 +1401,12 @@ const Proyecto = () => {
                                   delete newFilters['ig02_2_ano_de_graduacion'];
                                 }
                               }
-                              setAnalyticsForm({ ...analyticsForm, filtros: newFilters });
+                              console.log('Setting year filters (LTE) - New filters:', newFilters);
+                              setAnalyticsForm(prevForm => {
+                                const newForm = { ...prevForm, filtros: newFilters };
+                                console.log('SetAnalyticsForm LTE called with:', newForm);
+                                return newForm;
+                              });
                             }}
                             min={2000}
                             max={2025}
@@ -1338,14 +1420,13 @@ const Proyecto = () => {
                         <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
                           Sexo:
                         </label>
-                        <Dropdown
-                          value={analyticsForm.filtros['ipg01_3_sexo']}
+                        <MultiSelect
+                          value={analyticsForm.filtros['ipg01_3_sexo'] || []}
                           onChange={(e) => handleFilterChange('ipg01_3_sexo', e.value)}
                           options={filterOptions.sexo}
                           placeholder="Todos"
                           className="input-field"
                           style={{ width: "200px" }}
-                          multiple
                           showClear
                         />
                       </div>
@@ -1355,14 +1436,13 @@ const Proyecto = () => {
                         <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
                           Estado Civil:
                         </label>
-                        <Dropdown
-                          value={analyticsForm.filtros['ipg02_4_estado_civil']}
+                        <MultiSelect
+                          value={analyticsForm.filtros['ipg02_4_estado_civil'] || []}
                           onChange={(e) => handleFilterChange('ipg02_4_estado_civil', e.value)}
                           options={filterOptions.estado_civil}
                           placeholder="Todos"
                           className="input-field"
                           style={{ width: "250px" }}
-                          multiple
                           showClear
                         />
                       </div>
@@ -1372,14 +1452,13 @@ const Proyecto = () => {
                         <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
                           Condición Laboral:
                         </label>
-                        <Dropdown
-                          value={analyticsForm.filtros['ipg05_7_cual_es_su_condicion_laboral_actual']}
+                        <MultiSelect
+                          value={analyticsForm.filtros['ipg05_7_cual_es_su_condicion_laboral_actual'] || []}
                           onChange={(e) => handleFilterChange('ipg05_7_cual_es_su_condicion_laboral_actual', e.value)}
                           options={filterOptions.condicion_laboral}
                           placeholder="Todos"
                           className="input-field"
                           style={{ width: "250px" }}
-                          multiple
                           showClear
                         />
                       </div>

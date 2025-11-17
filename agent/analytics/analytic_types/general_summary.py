@@ -38,44 +38,87 @@ def _apply_filters(df: pd.DataFrame, poblacion: Dict[str, Any]) -> pd.DataFrame:
       - lista:         {"sexo": ["F","M"]} -> df[df["sexo"].isin(["F","M"])]
       - dict:          {"anio": {"gte": 2020, "lte": 2024}}
     """
+    logger.info(f"Applying filters to dataframe. Available columns: {list(df.columns)}")
+    
     # Filtro directo por programa si existe y la columna está en el DF
     programa = poblacion.get("programa")
     if programa is not None and "programa" in df.columns:
+        logger.info(f"Filtering by programa: {programa}")
         df = df[df["programa"] == programa]
 
     filtros = poblacion.get("filtros", {}) or {}
+    logger.info(f"Processing filters: {filtros}")
+    
     for col, cond in filtros.items():
+        logger.info(f"Processing filter for column '{col}' with condition: {cond}")
         if col not in df.columns:
+            logger.warning(f"Column '{col}' not found in dataframe. Available columns: {list(df.columns)}")
             # Si la columna no existe, ignoramos ese filtro
             continue
 
+        logger.info(f"Applying filter for column '{col}'")
         serie = df[col]
+        
+        # Special handling for year columns - convert to numeric if needed
+        if 'ano' in col.lower() or 'year' in col.lower():
+            logger.info(f"Detected year column '{col}', converting to numeric")
+            # Convert to numeric, invalid parsing becomes NaN
+            serie_numeric = pd.to_numeric(serie, errors='coerce')
+            # Log data types and sample values for debugging
+            logger.info(f"Original series dtype: {serie.dtype}, sample values: {serie.head().tolist()}")
+            logger.info(f"Converted series dtype: {serie_numeric.dtype}, sample values: {serie_numeric.head().tolist()}")
+            # Count non-null values
+            logger.info(f"Non-null values after conversion: {serie_numeric.notna().sum()} out of {len(serie_numeric)}")
+            serie = serie_numeric
 
         # 1) Valor simple -> igualdad
         if isinstance(cond, (str, int, float, bool)):
+            logger.info(f"Applying simple equality filter: {col} == {cond}")
             df = df[serie == cond]
 
         # 2) Lista -> IN
         elif isinstance(cond, list):
+            logger.info(f"Applying list filter: {col} IN {cond}")
             df = df[serie.isin(cond)]
 
         # 3) Dict de operadores
         elif isinstance(cond, dict):
+            logger.info(f"Applying dict filter for {col}: {cond}")
             if "eq" in cond:
+                logger.info(f"  - Equality: {col} == {cond['eq']}")
                 df = df[serie == cond["eq"]]
             if "neq" in cond:
+                logger.info(f"  - Not equal: {col} != {cond['neq']}")
                 df = df[serie != cond["neq"]]
             if "gte" in cond:
-                df = df[serie >= cond["gte"]]
+                logger.info(f"  - Greater than or equal: {col} >= {cond['gte']}")
+                # For year comparisons, ensure we have valid numeric values
+                if 'ano' in col.lower() or 'year' in col.lower():
+                    logger.info(f"  - Applying numeric filter, excluding NaN values")
+                    df = df[serie >= cond["gte"]]
+                else:
+                    df = df[serie >= cond["gte"]]
             if "lte" in cond:
-                df = df[serie <= cond["lte"]]
+                logger.info(f"  - Less than or equal: {col} <= {cond['lte']}")
+                # For year comparisons, ensure we have valid numeric values  
+                if 'ano' in col.lower() or 'year' in col.lower():
+                    logger.info(f"  - Applying numeric filter, excluding NaN values")
+                    df = df[serie <= cond["lte"]]
+                else:
+                    df = df[serie <= cond["lte"]]
             if "gt" in cond:
+                logger.info(f"  - Greater than: {col} > {cond['gt']}")
                 df = df[serie > cond["gt"]]
             if "lt" in cond:
+                logger.info(f"  - Less than: {col} < {cond['lt']}")
                 df = df[serie < cond["lt"]]
             if "in" in cond:
+                logger.info(f"  - In list: {col} IN {cond['in']}")
                 df = df[serie.isin(cond["in"])]
+        
+        logger.info(f"After applying filter for {col}, dataframe has {len(df)} rows")
 
+    logger.info(f"Final filtered dataframe has {len(df)} rows")
     return df
 
 
